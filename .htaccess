@@ -1,0 +1,149 @@
+# =============================================================
+# .htaccess — Конфигурация Apache для веб-платформы
+# Расположение: корень проекта (рядом с index.php)
+# =============================================================
+
+# Требуем Apache mod_rewrite
+Options -Indexes
+Options -MultiViews
+
+# ------------------------------------------------------------------
+# ВКЛЮЧАЕМ MOD_REWRITE (перенаправление всех URL на index.php)
+# ------------------------------------------------------------------
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Базовый путь — если сайт в подпапке (например /furniture_platform/),
+    # раскомментируй и укажи путь:
+    # RewriteBase /furniture_platform/
+
+    # Не перенаправляем запросы к реально существующим файлам
+    # (CSS, JS, изображения, шрифты)
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+
+    # Все остальные запросы → index.php (Front Controller)
+    RewriteRule ^ index.php [L,QSA]
+</IfModule>
+
+
+# ------------------------------------------------------------------
+# ЗАЩИТА ЧУВСТВИТЕЛЬНЫХ ФАЙЛОВ И ПАПОК
+# Прямой доступ из браузера к этим путям запрещён.
+# ------------------------------------------------------------------
+
+# Запрет доступа к конфигурационным файлам PHP
+<FilesMatch "^(config\.php|Database\.php)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order deny,allow
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+# Запрет доступа к папке config напрямую
+<IfModule mod_rewrite.c>
+    RewriteRule ^config/.*$ - [F,L]
+    RewriteRule ^controllers/.*$ - [F,L]
+    RewriteRule ^models/.*$ - [F,L]
+    RewriteRule ^views/.*$ - [F,L]
+    RewriteRule ^sql/.*$ - [F,L]
+</IfModule>
+
+# Запрет доступа к .env, .git и другим служебным файлам
+<FilesMatch "^\.">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+</FilesMatch>
+
+# Запрет доступа к SQL-файлам
+<FilesMatch "\.sql$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+</FilesMatch>
+
+# Запрет доступа к PHP-файлам в public/ (там только CSS/JS/изображения)
+<IfModule mod_rewrite.c>
+    RewriteRule ^public/.*\.php$ - [F,L]
+</IfModule>
+
+
+# ------------------------------------------------------------------
+# ЗАГОЛОВКИ БЕЗОПАСНОСТИ HTTP
+# (дублируют то, что устанавливается в PHP — как резервный уровень)
+# ------------------------------------------------------------------
+<IfModule mod_headers.c>
+    Header always set X-Frame-Options "DENY"
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set Referrer-Policy "same-origin"
+    Header always set Permissions-Policy "geolocation=(), microphone=(), camera=()"
+
+    # Убираем заголовок Server (скрываем версию Apache)
+    Header always unset Server
+    Header always unset X-Powered-By
+</IfModule>
+
+# Скрываем версию PHP
+<IfModule mod_php.c>
+    php_flag expose_php Off
+</IfModule>
+
+
+# ------------------------------------------------------------------
+# СЖАТИЕ GZIP (ускорение загрузки)
+# ------------------------------------------------------------------
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html
+    AddOutputFilterByType DEFLATE text/css
+    AddOutputFilterByType DEFLATE text/javascript
+    AddOutputFilterByType DEFLATE application/javascript
+    AddOutputFilterByType DEFLATE application/json
+    AddOutputFilterByType DEFLATE image/svg+xml
+    AddOutputFilterByType DEFLATE font/woff2
+</IfModule>
+
+
+# ------------------------------------------------------------------
+# КЕШИРОВАНИЕ СТАТИЧЕСКИХ РЕСУРСОВ (оптимизация Core Web Vitals)
+# ------------------------------------------------------------------
+<IfModule mod_expires.c>
+    ExpiresActive On
+
+    # Изображения — 1 месяц
+    ExpiresByType image/webp   "access plus 1 month"
+    ExpiresByType image/jpeg   "access plus 1 month"
+    ExpiresByType image/png    "access plus 1 month"
+    ExpiresByType image/svg+xml "access plus 1 month"
+    ExpiresByType image/x-icon "access plus 1 year"
+
+    # CSS и JS — 1 неделя
+    # (при обновлении файлов добавляй версию: style.css?v=2)
+    ExpiresByType text/css                "access plus 1 week"
+    ExpiresByType application/javascript  "access plus 1 week"
+
+    # Шрифты — 1 год (не меняются)
+    ExpiresByType font/woff2 "access plus 1 year"
+    ExpiresByType font/woff  "access plus 1 year"
+
+    # HTML — не кешируем (всегда свежий)
+    ExpiresByType text/html "access plus 0 seconds"
+</IfModule>
+
+
+# ------------------------------------------------------------------
+# КОДИРОВКА ПО УМОЛЧАНИЮ
+# ------------------------------------------------------------------
+AddDefaultCharset UTF-8
+
+
+# ------------------------------------------------------------------
+# HTTPS-РЕДИРЕКТ (раскомментируй на production-сервере с SSL)
+# ------------------------------------------------------------------
+# <IfModule mod_rewrite.c>
+#     RewriteCond %{HTTPS} off
+#     RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+# </IfModule>
