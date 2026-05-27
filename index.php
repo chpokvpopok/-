@@ -152,8 +152,8 @@ try {
         $products   = $controller->getProductsByCategory(0, $locale);
         render('home', [
             'products' => $products,
-            'pageTitle' => 'Мебельная платформа',
-            'pageDescription' => 'Профессиональная мебельная платформа для диспетчерских центров.',
+            'pageTitle' => 'Quattro — мебель для диспетчерских и офисов',
+            'pageDescription' => 'Quattro: профессиональная мебель для диспетчерских центров, офисов и модульных пространств.',
             'bodyClass' => 'page-home',
         ]);
         exit;
@@ -209,7 +209,7 @@ try {
         $description = mb_substr(strip_tags($product['description'] ?? ''), 0, 160);
         render('product/card', [
             'product' => $product,
-            'pageTitle' => $product['name'] . ' — Мебельная платформа',
+            'pageTitle' => $product['name'] . ' — Quattro',
             'pageDescription' => $description,
             'bodyClass' => 'page-product',
             'extraCss' => ['/public/css/configurator.css'],

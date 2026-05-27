@@ -21,8 +21,8 @@ function render(string $view, array $data = [], array $layout = []): void
 
     extract($data, EXTR_SKIP);
 
-    $pageTitle       = $layout['pageTitle'] ?? $data['pageTitle'] ?? 'Мебельная платформа';
-    $pageDescription = $layout['pageDescription'] ?? $data['pageDescription'] ?? 'Сайт мебельной платформы для промышленных и коммерческих заказчиков.';
+    $pageTitle       = $layout['pageTitle'] ?? $data['pageTitle'] ?? 'Quattro';
+    $pageDescription = $layout['pageDescription'] ?? $data['pageDescription'] ?? 'Quattro — мебель для диспетчерских центров, офисов и модульных пространств.';
     $bodyClass       = $layout['bodyClass'] ?? $data['bodyClass'] ?? '';
     $extraCss        = $layout['extraCss'] ?? $data['extraCss'] ?? [];
     $extraJs         = $layout['extraJs'] ?? $data['extraJs'] ?? [];

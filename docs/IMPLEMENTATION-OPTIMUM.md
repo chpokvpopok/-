@@ -69,7 +69,7 @@
 | GET   | `/api/product/{id}`   | ⚡ есть                          |
 | GET   | `/api/csrf-token`     | ⚡ есть                          |
 | POST  | `/api/order/create`   | ⚡ есть                          |
-| POST  | `/api/lead/create`    | **Новый**                        |
+| POST  | `/api/lead/create`    | ⚡ есть                          |
 | GET   | `/*` 404              | Layout                           |
 
 **Убрать из навигации:** `/cart` (или не показывать в меню).
@@ -118,19 +118,19 @@
 
 | Поле                 | Значение                                                          |
 | -------------------- | ----------------------------------------------------------------- |
-| **Последняя задача** | OPT-044 (пакет O5-Leads)                                          |
+| **Последняя задача** | OPT-052 (пакет O6-Polish)                                         |
 | **Следующая**        | — дипломная версия «Оптимум» завершена                            |
 | **Запуск**           | `./scripts/dev.sh` или `./start-dev.ps1` → http://localhost:8080 |
 
 ### Уже готово ⚡
 
 - [x] `index.php`, `router.php`, автозагрузка, config
-- [x] `ProductController`, `OrderController`
-- [x] Конфигуратор + `POST /api/order/create`
+- [x] `ProductController`, `OrderController`, `LeadController`
+- [x] Конфигуратор + `POST /api/order/create` + `POST /api/lead/create`
 - [x] `sql/schema.sql` + 2 демо-товара
 - [x] `scripts/dev.sh`
 - [x] **ROADMAP TASK-001..009** — `migrate.sh`, контентные таблицы, seed (см. выше)
-- [x] **O1-DB** — для диплома закрыт, OPT-001/002 не дублировать (README — по желанию OPT-002)
+- [x] **O1-DB** — для диплома закрыт; README в корне (OPT-002)
 
 ---
 
@@ -517,7 +517,7 @@ mysql -u root furniture_platform -e "DESCRIBE leads"
 
 **Критерии приёмки:**
 
-- [ ] Без CSRF → 403; с CSRF → 201 и запись в БД
+- [x] Без CSRF → 403; с CSRF → 201 и запись в БД
 
 **Проверка:**
 
@@ -544,7 +544,7 @@ curl -s -X POST http://localhost:8080/api/lead/create \
 
 **Критерии приёмки:**
 
-- [ ] Рендер на главной без JS — поля видны
+- [x] Рендер на главной без JS — поля видны
 
 ---
 
@@ -562,7 +562,7 @@ curl -s -X POST http://localhost:8080/api/lead/create \
 
 **Критерии приёмки:**
 
-- [ ] Отправка с главной без перезагрузки; запись в `leads`
+- [x] Отправка с главной без перезагрузки; запись в `leads`
 
 ---
 
@@ -578,7 +578,7 @@ curl -s -X POST http://localhost:8080/api/lead/create \
 
 **Критерии приёмки:**
 
-- [ ] Два пути на товаре: заказ (модалка) и КП (форма)
+- [x] Два пути на товаре: заказ (модалка) и КП (форма)
 
 ---
 
@@ -594,7 +594,7 @@ curl -s -X POST http://localhost:8080/api/lead/create \
 
 **Критерии приёмки:**
 
-- [ ] Якорь `#lead-form` с hero работает
+- [x] Якорь `#lead-form` с hero работает
 
 **Промпт:** `Реализуй пакет O5: OPT-040..044`
 

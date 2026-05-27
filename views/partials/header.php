@@ -3,10 +3,12 @@
  * views/partials/header.php
  */
 declare(strict_types=1);
+
+require __DIR__ . '/contacts.php';
 ?>
 <header class="site-header">
     <div class="container">
-        <a class="site-logo" href="/">eteo</a>
+        <a class="site-logo" href="/">Quattro</a>
 
         <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-navigation">
             <span class="nav-toggle__bar"></span>
@@ -21,8 +23,8 @@ declare(strict_types=1);
         </nav>
 
         <div class="site-contact">
-            <a class="site-nav__link" href="tel:+78003511801">+7 (800) 351-18-01</a>
-            <a class="site-nav__link" href="mailto:sales@eteo.ru">sales@eteo.ru</a>
+            <a class="site-nav__link" href="<?= e($contactPhoneHref) ?>"><?= e($contactPhone) ?></a>
+            <a class="site-nav__link" href="mailto:<?= e($contactEmail) ?>"><?= e($contactEmail) ?></a>
         </div>
 
         <div class="site-actions">

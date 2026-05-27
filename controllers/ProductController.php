@@ -120,6 +120,7 @@ class ProductController
         $sql = "
             SELECT
                 p.id,
+                p.category_id,
                 {$nameCol}        AS name,
                 {$descCol}        AS description,
                 p.base_price,

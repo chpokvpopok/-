@@ -17,13 +17,26 @@ declare(strict_types=1);
         <?php else: ?>
             <div class="grid-3">
                 <?php foreach ($categories as $category): ?>
-                    <article class="card catalog-card">
+                    <?php
+                    $categoryId = (int)$category['id'];
+                    $direction  = get_catalog_direction($categoryId);
+                    ?>
+                    <article class="card catalog-card direction-card">
                         <h2><?= e($category['name']) ?></h2>
-                        <p class="text-muted">
-                            <?= (int)$category['product_count'] ?>
-                            <?= ((int)$category['product_count'] === 1) ? 'модель' : 'моделей' ?>
-                        </p>
-                        <a class="btn btn--outline" href="/catalog/<?= (int)$category['id'] ?>">Смотреть</a>
+                        <?php if ($direction !== null): ?>
+                            <p class="text-muted"><?= e($direction['description']) ?></p>
+                            <?php
+                            $variants = $direction['variants'];
+                            $title = 'Варианты мебели';
+                            require __DIR__ . '/../partials/variants-list.php';
+                            ?>
+                        <?php else: ?>
+                            <p class="text-muted">
+                                <?= (int)$category['product_count'] ?>
+                                <?= ((int)$category['product_count'] === 1) ? 'модель' : 'моделей' ?>
+                            </p>
+                        <?php endif; ?>
+                        <a class="btn btn--outline" href="/catalog/<?= $categoryId ?>">Смотреть</a>
                     </article>
                 <?php endforeach; ?>
             </div>

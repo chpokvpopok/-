@@ -7,7 +7,7 @@ declare(strict_types=1);
 <section class="section home-hero">
     <div class="container home-hero__inner">
         <div class="home-hero__content">
-            <p class="home-hero__eyebrow">Профессиональная мебель</p>
+            <p class="home-hero__eyebrow">Quattro</p>
             <h1>Создаем технологичные пространства для продуктивной работы</h1>
             <p class="section__text">Проектируем и производим диспетчерские и офисные решения, которые помогают командам быстро принимать решения и работать без простоев.</p>
             <div class="home-hero-actions">

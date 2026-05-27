@@ -18,6 +18,9 @@ declare(strict_types=1);
                                 <p class="text-muted"><?= e($item['category_name']) ?></p>
                                 <h3><?= e($item['name']) ?></h3>
                                 <p class="text-muted"><?= e($item['sku']) ?></p>
+                                <a class="home-card__variants-link" href="/catalog/<?= (int)$item['category_id'] ?>#variants">
+                                    Все варианты направления →
+                                </a>
                             </div>
                             <div>
                                 <p class="text-muted" style="margin-bottom: 16px; font-weight: 600; color: var(--color-accent);">

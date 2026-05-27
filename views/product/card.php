@@ -135,6 +135,29 @@ $productImage = product_image($product['image_preview'] ?? null);
 
     <?php include __DIR__ . '/modal_order.php'; ?>
 
+    <?php
+    $relatedVariants = get_catalog_variants_except_product(
+        (int)$product['category_id'],
+        (int)$product['id']
+    );
+    ?>
+    <?php if (!empty($relatedVariants)): ?>
+        <section class="product-variants section--sm">
+            <h2 class="product-variants__title">Другие варианты направления</h2>
+            <p class="product-variants__text text-muted">
+                Смотрите другие решения Quattro в категории «<?= e($product['category_name']) ?>».
+            </p>
+            <?php
+            $variants = $relatedVariants;
+            $title = null;
+            require __DIR__ . '/../partials/variants-list.php';
+            ?>
+            <a class="btn btn--outline" href="/catalog/<?= (int)$product['category_id'] ?>#variants">
+                Все варианты направления
+            </a>
+        </section>
+    <?php endif; ?>
+
     <section class="product-lead">
         <h2 class="product-lead__title">Или оставьте заявку менеджеру</h2>
         <p class="product-lead__text">Подготовим коммерческое предложение без оформления заказа.</p>
