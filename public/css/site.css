@@ -216,6 +216,26 @@ a {
     color: var(--color-text-secondary);
 }
 
+.catalog-card {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.catalog-card__image {
+    width: 100%;
+    aspect-ratio: 3 / 2;
+    object-fit: cover;
+    border-radius: var(--radius-sm);
+    background: var(--color-bg);
+}
+
+.catalog-card__price {
+    margin: 0;
+    color: var(--color-accent);
+    font-weight: 600;
+}
+
 .page-error {
     min-height: calc(100vh - 160px);
     display: grid;

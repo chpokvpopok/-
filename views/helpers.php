@@ -17,3 +17,23 @@ function format_price(float $value): string
 {
     return number_format($value, 0, '.', ' ') . ' ₸';
 }
+
+/**
+ * Возвращает URL превью товара или placeholder, если файла нет.
+ */
+function product_image(?string $path): string
+{
+    $placeholder = '/public/images/placeholder.webp';
+
+    if ($path === null || trim($path) === '') {
+        return $placeholder;
+    }
+
+    $normalized = str_starts_with($path, '/public/')
+        ? substr($path, strlen('/public'))
+        : $path;
+
+    $filePath = dirname(__DIR__) . '/public' . $normalized;
+
+    return is_file($filePath) ? $path : $placeholder;
+}

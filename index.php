@@ -13,7 +13,8 @@
  *
  * Маршруты:
  *   GET  /                          → Главная страница
- *   GET  /catalog/{categoryId}      → Каталог товаров
+ *   GET  /catalog                   → Хаб категорий
+ *   GET  /catalog/{categoryId}      → Товары категории
  *   GET  /product/{productId}       → Карточка товара с конфигуратором
  *   GET  /api/product/{id}          → JSON: данные товара
  *   GET  /api/csrf-token            → JSON: CSRF-токен
@@ -157,17 +158,36 @@ try {
         exit;
     }
 
-    // ---- GET /catalog/{categoryId} --------------------------------
+    // ---- GET /catalog и GET /catalog/{categoryId} -----------------
     if ($section === 'catalog' && $requestMethod === 'GET') {
-        $categoryId = (int)$param;
         $controller = new App\Controllers\ProductController();
-        $products   = $controller->getProductsByCategory($categoryId, $locale);
-        $categoryTitle = !empty($products[0]['category_name']) ? $products[0]['category_name'] : 'Каталог';
-        render('catalog', [
+
+        if ($param === '') {
+            $categories = $controller->getCategories($locale);
+            render('catalog/index', [
+                'categories' => $categories,
+                'pageTitle' => 'Каталог',
+                'pageDescription' => 'Категории мебели для диспетчерских и технологических пространств.',
+                'bodyClass' => 'page-catalog',
+            ]);
+            exit;
+        }
+
+        $categoryId = (int)$param;
+        $category   = $controller->getCategoryById($categoryId, $locale);
+
+        if ($category === null) {
+            http_response_code(404);
+            render('errors/404', ['pageTitle' => '404 — Страница не найдена']);
+            exit;
+        }
+
+        $products = $controller->getProductsByCategory($categoryId, $locale);
+        render('catalog/category', [
+            'category' => $category,
             'products' => $products,
-            'categoryTitle' => $categoryTitle,
-            'pageTitle' => $categoryTitle . ' — каталог',
-            'pageDescription' => 'Каталог товаров категории ' . $categoryTitle,
+            'pageTitle' => $category['name'] . ' — каталог',
+            'pageDescription' => 'Каталог товаров категории ' . $category['name'],
             'bodyClass' => 'page-catalog',
         ]);
         exit;
@@ -181,11 +201,19 @@ try {
 
         if ($product === null) {
             http_response_code(404);
-            require __DIR__ . '/views/errors/404.php';
+            render('errors/404', ['pageTitle' => '404 — Страница не найдена']);
             exit;
         }
 
-        require __DIR__ . '/views/product/card.php';
+        $description = mb_substr(strip_tags($product['description'] ?? ''), 0, 160);
+        render('product/card', [
+            'product' => $product,
+            'pageTitle' => $product['name'] . ' — Мебельная платформа',
+            'pageDescription' => $description,
+            'bodyClass' => 'page-product',
+            'extraCss' => ['/public/css/configurator.css'],
+            'extraJs' => ['/public/js/configurator.js'],
+        ]);
         exit;
     }
 

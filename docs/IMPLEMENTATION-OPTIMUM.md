@@ -118,8 +118,8 @@
 
 | Поле                 | Значение                                                          |
 | -------------------- | ----------------------------------------------------------------- |
-| **Последняя задача** | OPT-025 (пакет O3-Home)                                           |
-| **Следующая**        | **OPT-030** (пакет O4-Catalog)                                    |
+| **Последняя задача** | OPT-033 (пакет O4-Catalog)                                           |
+| **Следующая**        | **OPT-040** (пакет O5-Leads)                                    |
 | **Запуск**           | `./scripts/dev.sh` или `./sql/migrate.sh` → http://localhost:8080 |
 
 ### Уже готово ⚡
@@ -436,7 +436,7 @@ mysql -u root furniture_platform -e "DESCRIBE leads"
 
 ## OPT-030 — `GET /catalog` — хаб категорий
 
-- [ ] **Зависимости:** O2
+- [x] **Зависимости:** O2
 
 **Файлы:** `index.php`, `views/catalog/index.php`
 
@@ -453,7 +453,7 @@ mysql -u root furniture_platform -e "DESCRIBE leads"
 
 ## OPT-031 — `GET /catalog/{id}` с layout
 
-- [ ] **Зависимости:** OPT-030, ProductController
+- [x] **Зависимости:** OPT-030, ProductController
 
 **Файлы:** `views/catalog/category.php` (заменить/переименовать `catalog.php`), `index.php`
 
@@ -470,7 +470,7 @@ mysql -u root furniture_platform -e "DESCRIBE leads"
 
 ## OPT-032 — Product page: общий header/footer
 
-- [ ] **Зависимости:** O2
+- [x] **Зависимости:** O2
 
 **Файлы:** `views/product/card.php`, `index.php`
 
@@ -489,7 +489,7 @@ mysql -u root furniture_platform -e "DESCRIBE leads"
 
 ## OPT-033 — Placeholder изображения
 
-- [ ] **Зависимости:** OPT-031, OPT-032
+- [x] **Зависимости:** OPT-031, OPT-032
 
 **Файлы:** `public/images/placeholder.webp` (или `.jpg`), опционально UPDATE `products.image_preview`
 
@@ -646,9 +646,9 @@ curl -s -X POST http://localhost:8080/api/lead/create \
 ## Пакеты
 
 - [x] **O1-DB** — OPT-001 ⚡; OPT-002 README (опционально)
-- [ ] **O2-Shell** — OPT-010..016
-- [ ] **O3-Home** — OPT-020..025
-- [ ] **O4-Catalog** — OPT-030..033
+- [x] **O2-Shell** — OPT-010..016
+- [x] **O3-Home** — OPT-020..025
+- [x] **O4-Catalog** — OPT-030..033
 - [ ] **O5-Leads** — OPT-040..044
 - [ ] **O6-Polish** — OPT-050..052
 

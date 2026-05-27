@@ -32,6 +32,67 @@ class ProductController
     // ------------------------------------------------------------------
 
     /**
+     * Возвращает список категорий для хаба каталога.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function getCategories(string $locale = 'ru'): array
+    {
+        $locale  = in_array($locale, ['ru', 'kk'], true) ? $locale : 'ru';
+        $nameCol = "name_{$locale}";
+
+        $sql = "
+            SELECT
+                c.id,
+                c.{$nameCol} AS name,
+                c.slug,
+                (
+                    SELECT COUNT(*)
+                    FROM products p
+                    WHERE p.category_id = c.id
+                      AND p.active = 1
+                ) AS product_count
+            FROM categories c
+            ORDER BY c.id ASC
+        ";
+
+        $stmt = $this->db->query($sql);
+
+        return $stmt->fetchAll();
+    }
+
+    /**
+     * Возвращает одну категорию по ID или null, если не найдена.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function getCategoryById(int $categoryId, string $locale = 'ru'): ?array
+    {
+        if ($categoryId <= 0) {
+            return null;
+        }
+
+        $locale  = in_array($locale, ['ru', 'kk'], true) ? $locale : 'ru';
+        $nameCol = "name_{$locale}";
+
+        $sql = "
+            SELECT
+                c.id,
+                c.{$nameCol} AS name,
+                c.slug
+            FROM categories c
+            WHERE c.id = :category_id
+            LIMIT 1
+        ";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([':category_id' => $categoryId]);
+        $category = $stmt->fetch();
+
+        return $category === false ? null : $category;
+    }
+
+    /**
      * Возвращает список активных товаров заданной категории
      * вместе с их конфигурационными опциями.
      *
