@@ -4,6 +4,14 @@
 
 Наставник помог с архитектурой и базой. **Защищаешь ты** — значит, ты должен уметь **запустить проект**, **пройти демо** и **объяснить**, что где лежит.
 
+### Карта на одной строке
+
+```
+ЧАТ0 проверка → ЧАТ1 O2 layout → ЧАТ2 O3 главная → ЧАТ3 O4 каталог → ЧАТ4 O5 форма → ЧАТ5 O6 финал
+```
+
+**Все промпты для копипаста — раздел 7.** Не придумывай сам, копируй оттуда.
+
 ---
 
 ## 1. О чём вообще проект (одним абзацем)
@@ -227,69 +235,303 @@ mysql -u root -e "SELECT * FROM furniture_platform.orders ORDER BY id DESC LIMIT
 | **O5** | OPT-040 … 044 | Форма КП + сохранение в `leads` | 0.5–1 день |
 | **O6** | OPT-050 … 052 | Полировка + чеклист для защиты | 0.5 дня |
 
-**Сейчас начинай с:** пакет **O2**, задача **OPT-010**.
+**Сейчас начинай с:** **ЧАТ 1** → промпт **O2** в **разделе 7**.
 
 ---
 
-## 7. Как вайбкодить в Cursor (пошагово)
+## 7. Промпты по чатам (копируй и вставляй)
 
-«Вайбкодинг» здесь = **ты руководишь**, AI **пишет код по чёткому ТЗ**. Не наоборот.
+**Главное правило:** один **пакет = один новый чат** в Cursor. Не пихай O2+O3+O4 в один чат — AI начнёт путаться и ломать конфигуратор.
 
-### Шаг A. Открой правильный контекст
+**Перед ЛЮБЫМ чатом:**
+1. `git pull origin main`
+2. Запусти сервер (раздел 5), окно не закрывай
+3. Создай **New Chat** (новый чат)
 
-1. Открой папку проекта в Cursor.
-2. В чат добавь через `@`:  
-   - `@docs/IMPLEMENTATION-OPTIMUM.md`  
-   - `@docs/GUIDE-MENYON.md`  
-   - при необходимости файл, который меняешь (`@index.php`)
+**После КАЖДОГО пакета:**
+1. Проверь в браузере (раздел 8)
+2. `git add .` → `git commit -m "O2: layout"` → `git push origin main`
 
-### Шаг B. Копируй готовый промпт (шаблон)
+---
 
-**На весь пакет O2:**
+### Шпаргалка: какой чат — что делать
+
+| Чат | Пакет | Что получишь | Новый чат? |
+|-----|-------|--------------|------------|
+| **0** | Подготовка | Убедиться что проект живой | Да |
+| **1** | O2 | Шапка, подвал, site.css, 404 | Да |
+| **2** | O3 | Нормальная главная | Да |
+| **3** | O4 | /catalog + меню на товаре | Да |
+| **4** | O5 | Форма КП + API | Да |
+| **5** | O6 | Финал + QA | Да |
+| **SOS** | Починка | Если что-то сломалось | Да, отдельно |
+
+---
+
+### Что прикреплять через `@` в каждом чате
+
+| Чат | Обязательно `@` | Иногда `@` |
+|-----|-----------------|------------|
+| 0 | — | — |
+| 1 (O2) | `docs/IMPLEMENTATION-OPTIMUM.md`, `docs/GUIDE-MENYON.md` | `index.php`, `views/errors/404.php` |
+| 2 (O3) | `docs/IMPLEMENTATION-OPTIMUM.md` | `views/home.php`, `views/layouts/main.php` |
+| 3 (O4) | `docs/IMPLEMENTATION-OPTIMUM.md` | `index.php`, `controllers/ProductController.php` |
+| 4 (O5) | `docs/IMPLEMENTATION-OPTIMUM.md` | `controllers/OrderController.php` (образец CSRF) |
+| 5 (O6) | `docs/IMPLEMENTATION-OPTIMUM.md` | — |
+| SOS | Файл с ошибкой + `docs/IMPLEMENTATION-OPTIMUM.md` | — |
+
+**Не прикрепляй:** `docs/IMPLEMENTATION-ROADMAP.md` — там лишние 95 задач, AI уедет не туда.
+
+**Запрет для всех чатов** (вставляй в каждый промпт):
 
 ```text
-Реализуй пакет O2 из docs/IMPLEMENTATION-OPTIMUM.md (задачи OPT-010 … OPT-016).
-Следуй docs/GUIDE-MENYON.md. База уже есть (TASK-001..009).
-Не делай то, что в разделе «Не делаем» в OPTIMUM.
-Не ломай /product/1 и API заказа (configurator.js, OrderController).
+ЗАПРЕЩЕНО: папка shop/, Laravel, React, /cases, /series, админка, KK-язык, ROADMAP.
+Работай только в КОРНЕ репозитория.
+Не ломай: /product/1, configurator.js, OrderController, POST /api/order/create.
+```
+
+---
+
+## ЧАТ 0 — «Проект вообще запускается?»
+
+**Когда:** один раз перед первым промптом, или после `git pull`.
+
+**Делай руками (не AI):**
+
+```cmd
+git pull origin main
+net start MySQL80
+mysql -u root < sql\schema.sql
+mysql -u root furniture_platform < sql\migrations\001_content_tables.sql
+mysql -u root furniture_platform < sql\migrations\002_alter_products.sql
+mysql -u root furniture_platform < sql\migrations\003_seed_content.sql
+```
+
+PowerShell — запуск сервера (раздел 5, пункт 4).
+
+**Проверь в браузере:**
+- http://localhost:8080/product/1 — конфигуратор, цена меняется
+- Оформи тестовый заказ — должна открыться success
+
+**Если тут не работает — не иди в ЧАТ 1.** Скинь ошибку наставнику или в **ЧАТ SOS**.
+
+---
+
+## ЧАТ 1 — Пакет O2 (layout, шапка, подвал)
+
+**@ контекст:** `docs/IMPLEMENTATION-OPTIMUM.md`, `docs/GUIDE-MENYON.md`
+
+**Скопируй целиком:**
+
+```text
+Реализуй пакет O2 из docs/IMPLEMENTATION-OPTIMUM.md — задачи OPT-010, OPT-011, OPT-012, OPT-013, OPT-014, OPT-015, OPT-016.
+
+ЗАПРЕЩЕНО: папка shop/, Laravel, React, /cases, /series, админка, KK-язык, ROADMAP.
+Работай только в КОРНЕ репозитория.
+Не ломай: /product/1, configurator.js, OrderController, POST /api/order/create.
+
+Нужно создать:
+- public/css/site.css (светлая тема)
+- views/helpers.php
+- includes/view.php + функция render()
+- views/layouts/main.php
+- views/partials/header.php, footer.php
+- public/js/site.js (burger, FAQ-пока заглушка ok, якоря)
+- перевести views/errors/404.php и 500.php на layout
+
 После работы:
-1) отметь выполненные задачи [x] в IMPLEMENTATION-OPTIMUM.md;
-2) обнови «Текущий статус» (следующая задача);
-3) напиши список изменённых файлов;
-4) дай команды как проверить в браузере.
+1. Отметь [x] OPT-010…016 в docs/IMPLEMENTATION-OPTIMUM.md
+2. Обнови «Текущий статус» → следующая OPT-020
+3. Список изменённых файлов
+4. Что проверить в браузере
 ```
 
-**На одну задачу (если AI наломал дров — откатывайся на мелкие шаги):**
+**После ответа AI — проверь (раздел 8 → «После O2»).**
+
+**Коммит:**
+```cmd
+git add .
+git commit -m "O2: layout, header, footer, site.css"
+git push origin main
+```
+
+**Если AI сломал /product/1 — сразу ЧАТ SOS (промпт внизу).**
+
+---
+
+## ЧАТ 2 — Пакет O3 (главная страница)
+
+**Новый чат.** **@:** `docs/IMPLEMENTATION-OPTIMUM.md`, `views/layouts/main.php`
 
 ```text
-Реализуй только OPT-013 из docs/IMPLEMENTATION-OPTIMUM.md (header.php).
-Не трогай другие файлы кроме перечисленных в задаче OPT-013.
+Реализуй пакет O3 из docs/IMPLEMENTATION-OPTIMUM.md — задачи OPT-020, OPT-021, OPT-022, OPT-023, OPT-024, OPT-025.
+
+ЗАПРЕЩЕНО: shop/, Laravel, /cases URL, /series, админка, ROADMAP.
+Не ломай конфигуратор и layout из O2.
+
+Секции в views/partials/sections/:
+- hero.php (3 кнопки: Каталог, Запросить КП → #lead-form, Конфигуратор → /product/1)
+- directions.php (3 карточки → /catalog/1, /catalog/2, /catalog/3)
+- advantages.php (4 тезиса, статика)
+- cases-static.php (2–3 карточки БЕЗ отдельных страниц)
+- faq.php (4 вопроса, аккордеон — site.js уже есть)
+- lead.php — пока заглушка «форма будет в O5» или пустой блок #lead-form
+
+Пересобери views/home.php через render() и секции.
+Обнови маршрут GET / в index.php если нужно.
+
+После: [x] OPT-020…025, обнови статус, список файлов, проверка в браузере.
 ```
 
-### Шаг C. Проверь сам (обязательно)
+**Проверь:** раздел 8 → «После O3».
 
-AI может:
-- забыть подключить CSS;
-- сломать конфигуратор;
-- сделать лишнее (админку, 10 страниц).
+**Коммит:** `git commit -m "O3: marketing home page"`
 
-**Ты после каждой сессии:**
-1. Обнови страницу в браузере (лучше Cmd+Shift+R).
-2. Пройди: `/` → `/catalog` → `/product/1` → попробуй заказ.
-3. Если что-то красное в PHP — скопируй ошибку в новый чат: *«исправь, не трогая X»*.
+---
 
-### Шаг D. Отметь прогресс
+## ЧАТ 3 — Пакет O4 (каталог)
 
-В `docs/IMPLEMENTATION-OPTIMUM.md` поставь `- [x]` у сделанных OPT и обнови таблицу **«Текущий статус»**. Так ты и наставник видите, где ты.
+**Новый чат.** **@:** `docs/IMPLEMENTATION-OPTIMUM.md`, `index.php`, `controllers/ProductController.php`
 
-### Чего НЕ делать с AI
+```text
+Реализуй пакет O4 из docs/IMPLEMENTATION-OPTIMUM.md — OPT-030, OPT-031, OPT-032, OPT-033.
+
+ЗАПРЕЩЕНО: shop/, slug-URL, /series, ROADMAP.
+Не ломай конфигуратор.
+
+Нужно:
+- GET /catalog → views/catalog/index.php (список категорий из БД)
+- GET /catalog/{id} → views/catalog/category.php с layout (замени старый catalog.php)
+- views/product/card.php — общий header/footer (site.css + configurator.css)
+- public/images/placeholder.webp или jpg + без битых картинок
+
+После: [x] OPT-030…033, статус, файлы, проверка.
+```
+
+**Проверь:** раздел 8 → «После O4».
+
+**Коммит:** `git commit -m "O4: catalog pages and product layout"`
+
+---
+
+## ЧАТ 4 — Пакет O5 (форма КП + API)
+
+**Новый чат.** **@:** `docs/IMPLEMENTATION-OPTIMUM.md`, `controllers/OrderController.php` (чтобы AI скопировал CSRF)
+
+```text
+Реализуй пакет O5 из docs/IMPLEMENTATION-OPTIMUM.md — OPT-040, OPT-041, OPT-042, OPT-043, OPT-044.
+
+ЗАПРЕЩЕНО: shop/, email-рассылка, ROADMAP.
+Не ломай POST /api/order/create.
+
+Нужно:
+- controllers/LeadController.php
+- POST /api/lead/create в index.php
+- views/partials/lead-form.php
+- public/js/site.js — отправка формы (fetch CSRF → POST JSON)
+- форма на главной (секция lead) и компактная на /product/1
+- INSERT в таблицу leads (уже есть в БД)
+
+CSRF — как в OrderController.
+
+После: [x] OPT-040…044, статус, файлы, curl или браузер-проверка.
+```
+
+**Проверь:** раздел 8 → «После O5».
+
+**Коммит:** `git commit -m "O5: lead form and API"`
+
+---
+
+## ЧАТ 5 — Пакет O6 (финал перед защитой)
+
+**Новый чат.** **@:** `docs/IMPLEMENTATION-OPTIMUM.md`
+
+```text
+Реализуй пакет O6 из docs/IMPLEMENTATION-OPTIMUM.md — OPT-050, OPT-051, OPT-052.
+
+ЗАПРЕЩЕНО: shop/, ROADMAP, новые фичи вне OPTIMUM.
+
+Нужно:
+- views/order/success.php — через общий layout
+- docs/QA-DIPLOMA.md — чеклист URL + сценарий защиты + curl для API
+- README.md в корне — как запустить на Windows (PHP, MySQL, php -S)
+- отметить [x] все пакеты O2–O6 в IMPLEMENTATION-OPTIMUM.md
+
+После: полный список что проверить перед защитой.
+```
+
+**Проверь:** раздел 8 → «Перед защитой» + пройди `docs/QA-DIPLOMA.md`.
+
+**Коммит:** `git commit -m "O6: polish, QA checklist, README"`
+
+---
+
+## ЧАТ SOS — «Всё сломалось»
+
+**Новый чат.** **@:** файл с ошибкой + `docs/IMPLEMENTATION-OPTIMUM.md`
+
+**Если сломался конфигуратор / заказ:**
+
+```text
+Сломался /product/1 или заказ после последних изменений.
+
+Ошибка (из терминала или браузера):
+<<<
+ВСТАВЬ СЮДА ТЕКСТ ОШИБКИ
+>>>
+
+Почини минимальным diff. Не трогай файлы вне проблемы.
+Не делай рефакторинг. Не трогай O3/O4 если чинишь O2.
+Проверь что /product/1 и POST /api/order/create снова работают.
+```
+
+**Если AI налепил лишнее (админка, shop/, 20 файлов):**
+
+```text
+Откати лишнее. Нужно было только OPT-XXX из docs/IMPLEMENTATION-OPTIMUM.md.
+Удали всё что не в списке файлов задачи OPT-XXX.
+Верни работоспособность /product/1.
+```
+
+**Если белый экран 500:**
+
+```text
+500 на http://localhost:8080/ после твоих изменений.
+
+Лог PHP:
+<<<
+ВСТАВЬ ИЗ ТЕРМИНАЛА
+>>>
+
+Исправь. Минимальный diff.
+```
+
+---
+
+## Если AI сделал криво — уменьши задачу
+
+Вместо целого пакета — **одна задача, новый чат:**
+
+```text
+Реализуй ТОЛЬКО OPT-013 из docs/IMPLEMENTATION-OPTIMUM.md.
+Только views/partials/header.php и стили в site.css для header.
+Не трогай другие файлы.
+```
+
+Такие номера: OPT-010, OPT-012, OPT-013, OPT-020, OPT-030, OPT-040… — смотри в `IMPLEMENTATION-OPTIMUM.md`.
+
+---
+
+## Чего НЕ делать с AI (напоминание)
 
 | Плохо | Хорошо |
 |-------|--------|
-| «Сделай как eteo.ru 1 в 1» | «Сделай пакет O3 по OPTIMUM» |
-| «Переделай весь проект на Laravel» | «Только PHP как сейчас» |
-| «Добавь всё из ROADMAP» | «Только OPTIMUM, раздел Не делаем» |
-| Принять код, не открыв браузер | Открыл → проверил → потом commit |
+| Один чат на весь проект | Чат 1 = O2, чат 2 = O3… |
+| «Сделай как eteo.ru 1 в 1» | «Пакет O3 по OPTIMUM» |
+| «Залей в папку shop» | «Только корень репо» |
+| Принять код, не открыв браузер | Проверил → commit → push |
+| Upload files на GitHub | `git commit` + `git push` |
 
 ---
 
@@ -372,7 +614,16 @@ AI может:
 | Конфигуратор не считает цену | Не трогай `configurator.js` / `card.php` без нужды; откати git |
 | AI налепил лишнего | Новый чат: «откати X, сделай только OPT-YYY» |
 
-**Git:** если наставник настроил репозиторий — коммить после каждого пакета: `O2 layout`, `O3 home`… Так можно откатиться.
+**Git после каждого пакета:**
+
+```cmd
+git pull origin main
+git add .
+git commit -m "O2: layout"
+git push origin main
+```
+
+Подставляй своё сообщение: `O3: home`, `O4: catalog`, `O5: leads`, `O6: polish`.
 
 ---
 
@@ -391,13 +642,14 @@ AI может:
 
 ## 13. Следующее действие (прямо сейчас)
 
-1. Запусти сервер (раздел 5, Windows), открой http://localhost:8080/product/1 — убедись, что конфигуратор живой.  
-2. Открой Cursor, вставь промпт из **раздела 7** для пакета **O2**.  
-3. После ответа AI — **раздел 8, проверка O2**.  
-4. Поставь `[x]` в OPTIMUM у OPT-010…016.
+1. **ЧАТ 0** — `git pull`, запусти сервер, проверь http://localhost:8080/product/1  
+2. **ЧАТ 1** — скопируй промпт из раздела 7 «ЧАТ 1 — O2»  
+3. Проверь браузер → **commit + push**  
+4. **ЧАТ 2** — новый чат, промпт O3  
+5. И так до **ЧАТ 5**
 
-Удачи на защите. Если застрял — сначала OPTIMUM (номер задачи), потом наставник, потом снова AI с **узким** промптом («только OPT-0XX»).
+**Ты сейчас здесь:** O1 ✅ → начинай **ЧАТ 1 (O2)**.
 
 ---
 
-*Версия: 2026-05-22 · для дипломной ветки «Оптимум»*
+*Версия: 2026-05-27 · промпты по чатам для дипломной ветки «Оптимум»*
