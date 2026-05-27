@@ -203,7 +203,16 @@ php -S localhost:8080 router.php
 
 Окно не закрывай — пока оно открыто, сайт работает.
 
-> На Mac у наставника есть `./scripts/dev.sh` — на Windows те же переменные, просто команды выше. Файл `dev.sh` в Git Bash тоже можно: `bash scripts/dev.sh` (если PHP/MySQL в PATH).
+> **Mac / Linux / Git Bash** — скрипты в корне и `scripts/`:
+>
+> ```bash
+> cd /path/to/shop   # или furniture_platform
+> chmod +x scripts/check-env.sh scripts/dev.sh start-dev.sh   # один раз
+> ./scripts/check-env.sh   # диагностика PHP, pdo_mysql, MySQL
+> ./start-dev.sh           # то же что ./scripts/dev.sh
+> ```
+>
+> На Windows в **Git Bash** те же команды (если `php` и `mysql` в PATH).
 
 ---
 
