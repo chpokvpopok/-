@@ -64,6 +64,8 @@ header('X-Frame-Options: DENY');
 // Запрет MIME-сниффинга браузером
 header('X-Content-Type-Options: nosniff');
 
+require_once __DIR__ . '/includes/view.php';
+
 // Принудительное использование HTTPS на 1 год (только для production)
 if (!$config['app']['debug']) {
     header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
@@ -146,7 +148,12 @@ try {
     if ($requestUri === '/' && $requestMethod === 'GET') {
         $controller = new App\Controllers\ProductController();
         $products   = $controller->getProductsByCategory(0, $locale);
-        require __DIR__ . '/views/home.php';
+        render('home', [
+            'products' => $products,
+            'pageTitle' => 'Мебельная платформа',
+            'pageDescription' => 'Профессиональная мебельная платформа для диспетчерских центров.',
+            'bodyClass' => 'page-home',
+        ]);
         exit;
     }
 
@@ -155,7 +162,14 @@ try {
         $categoryId = (int)$param;
         $controller = new App\Controllers\ProductController();
         $products   = $controller->getProductsByCategory($categoryId, $locale);
-        require __DIR__ . '/views/catalog.php';
+        $categoryTitle = !empty($products[0]['category_name']) ? $products[0]['category_name'] : 'Каталог';
+        render('catalog', [
+            'products' => $products,
+            'categoryTitle' => $categoryTitle,
+            'pageTitle' => $categoryTitle . ' — каталог',
+            'pageDescription' => 'Каталог товаров категории ' . $categoryTitle,
+            'bodyClass' => 'page-catalog',
+        ]);
         exit;
     }
 
@@ -216,7 +230,7 @@ try {
 
     // ---- 404 — ничего не совпало --------------------------------
     http_response_code(404);
-    require __DIR__ . '/views/errors/404.php';
+    render('errors/404', ['pageTitle' => '404 — Страница не найдена']);
 
 } catch (Throwable $e) {
     // Глобальный обработчик непойманных исключений
@@ -232,6 +246,6 @@ try {
         // Логируем в файл (не показываем детали пользователю)
         error_log('[' . date('Y-m-d H:i:s') . '] ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
         http_response_code(500);
-        require __DIR__ . '/views/errors/500.php';
+        render('errors/500', ['pageTitle' => '500 — Ошибка сервера']);
     }
 }

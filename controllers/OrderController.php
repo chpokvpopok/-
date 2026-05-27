@@ -203,15 +203,22 @@ class OrderController
      */
     public function showSuccess(int $orderId): void
     {
+        require_once __DIR__ . '/../includes/view.php';
+
         $order = $this->getOrderById($orderId);
 
         if ($order === null) {
             http_response_code(404);
-            include __DIR__ . '/../views/errors/404.php';
+            render('errors/404', ['pageTitle' => '404 — Страница не найдена']);
             return;
         }
 
-        include __DIR__ . '/../views/order/success.php';
+        render('order/success', [
+            'order' => $order,
+            'pageTitle' => 'Заказ принят',
+            'pageDescription' => 'Ваш заказ принят и обрабатывается.',
+            'bodyClass' => 'page-order-success',
+        ]);
     }
 
     // ==================================================================
