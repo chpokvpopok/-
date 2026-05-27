@@ -100,7 +100,23 @@ furniture_platform/
 
 При установке MySQL запомни пароль `root` (или оставь пустым для учебки — тогда в командах без `-p`).
 
-Добавь в PATH (если не добавилось само): папки с `php.exe` и `mysql.exe` (часто `C:\Program Files\MySQL\MySQL Server 8.0\bin`).
+Добавь в PATH (если не добавилось само): папки с `php.exe` и `mysql.exe` (часто `C:\Program Files\MySQL\MySQL Server 8.4\bin`).
+
+**Если ошибка «выполнение сценариев отключено»** — не меняй политику навсегда, используй один из вариантов:
+
+```powershell
+# только в этом окне PowerShell:
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\scripts\check-env.ps1
+.\start-dev.ps1
+```
+
+Или двойной клик / из CMD (без политики):
+
+```cmd
+scripts\check-env.cmd
+start-dev.cmd
+```
 
 ---
 
