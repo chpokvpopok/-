@@ -1,92 +1,194 @@
-# Запуск локального сервера PHP
-# Очень простая версия без проблем с кодировкой
+# Запуск локального dev-сервера (только PowerShell, без cmd/bash)
+# Запуск: из корня репозитория (shop):  .\start-dev.ps1
 
+$ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
-# Ищем PHP
+$projectRoot = $PSScriptRoot
+if (-not (Test-Path (Join-Path $projectRoot 'router.php'))) {
+    Write-Host 'ОШИБКА: запусти скрипт из корня проекта (где лежит router.php).' -ForegroundColor Red
+    exit 1
+}
+
+function Find-Executable {
+    param(
+        [string]$Name,
+        [string[]]$ExtraPaths
+    )
+    $cmd = Get-Command $Name -ErrorAction SilentlyContinue
+    if ($cmd) { return $cmd.Source }
+
+    foreach ($p in $ExtraPaths) {
+        if ($p -and (Test-Path $p)) { return $p }
+    }
+    return $null
+}
+
+function Find-MysqlClient {
+    $fromPath = Find-Executable 'mysql.exe' @()
+    if ($fromPath) { return $fromPath }
+
+    $base = 'C:\Program Files\MySQL'
+    if (Test-Path $base) {
+        $dirs = Get-ChildItem -Path $base -Directory -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -like 'MySQL Server *' } |
+            Sort-Object Name -Descending
+        foreach ($d in $dirs) {
+            $exe = Join-Path $d.FullName 'bin\mysql.exe'
+            if (Test-Path $exe) { return $exe }
+        }
+    }
+
+    return Find-Executable 'mysql.exe' @(
+        'C:\xampp\mysql\bin\mysql.exe'
+    )
+}
+
+function Find-PhpExecutable {
+    $candidates = @()
+
+    $fromPath = Get-Command php.exe -All -ErrorAction SilentlyContinue
+    if ($fromPath) {
+        $candidates += $fromPath | ForEach-Object { $_.Source }
+    }
+
+    $candidates += @(
+        'C:\xampp\php\php.exe',
+        'C:\php\php.exe',
+        'C:\Program Files\PHP\php.exe'
+    )
+
+    $wingetPhp = Join-Path $env:LOCALAPPDATA 'Microsoft\WinGet\Packages'
+    if (Test-Path $wingetPhp) {
+        $candidates += Get-ChildItem -Path $wingetPhp -Recurse -Filter 'php.exe' -ErrorAction SilentlyContinue |
+            Select-Object -ExpandProperty FullName
+    }
+
+    $best = $null
+    $bestVer = [version]'0.0'
+
+    foreach ($exe in ($candidates | Select-Object -Unique)) {
+        if (-not (Test-Path $exe)) { continue }
+        try {
+            $verLine = & $exe -r 2>$null
+            if (-not $verLine) { continue }
+            $ver = [version]($verLine -replace '^(\d+\.\d+\.\d+).*', '$1')
+            if ($ver -ge [version]'8.2.0' -and $ver -gt $bestVer) {
+                $best = $exe
+                $bestVer = $ver
+            }
+        } catch { }
+    }
+
+    if ($best) { return $best }
+
+    # Любой php из PATH, даже если версию не распарсили
+    return Find-Executable 'php.exe' @('C:\xampp\php\php.exe')
+}
+
+function Test-PhpPdoMysql {
+    param([string]$PhpExe)
+    $mods = & $PhpExe -m 2>$null
+    return ($mods -match 'pdo_mysql')
+}
+
+function Start-MysqlServiceIfNeeded {
+    $services = Get-Service -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -match 'mysql' -and $_.Status -ne 'Running' }
+    foreach ($s in $services) {
+        try {
+            Write-Host "Запуск службы $($s.Name)..."
+            Start-Service $s.Name -ErrorAction Stop
+            Start-Sleep -Seconds 3
+            return
+        } catch { }
+    }
+    # Типичные имена
+    foreach ($name in @('MySQL84', 'MySQL80', 'MySQL')) {
+        $svc = Get-Service -Name $name -ErrorAction SilentlyContinue
+        if ($svc -and $svc.Status -ne 'Running') {
+            try {
+                Write-Host "Запуск службы $name..."
+                Start-Service $name -ErrorAction Stop
+                Start-Sleep -Seconds 3
+                return
+            } catch { }
+        }
+    }
+}
+
+Write-Host "Корень проекта: $projectRoot" -ForegroundColor Cyan
 Write-Host "Ищу PHP..."
-$php = $null
-
-if (Test-Path "C:\xampp\php\php.exe") { $php = "C:\xampp\php\php.exe" }
-elseif (Test-Path "C:\Program Files\PHP\php.exe") { $php = "C:\Program Files\PHP\php.exe" }
-elseif (Test-Path "C:\php\php.exe") { $php = "C:\php\php.exe" }
-else {
-    $cmd = Get-Command php.exe -ErrorAction SilentlyContinue
-    if ($cmd) { $php = $cmd.Source }
-}
-
+$php = Find-PhpExecutable
 if (-not $php) {
-    Write-Host "ОШИБКА: PHP не найден!" -ForegroundColor Red
-    Read-Host "Нажмите Enter"
-    exit
+    Write-Host 'ОШИБКА: PHP 8.2+ не найден. Установи: winget install PHP.PHP' -ForegroundColor Red
+    exit 1
 }
 
+$phpVer = & $php -v 2>$null | Select-Object -First 1
 Write-Host "PHP: $php" -ForegroundColor Green
+Write-Host "     $phpVer"
 
-# Ищем MySQL
-Write-Host "Ищу MySQL..."
-$mysql = $null
+if (-not (Test-PhpPdoMysql -PhpExe $php)) {
+    Write-Host 'ОШИБКА: расширение pdo_mysql не загружено.' -ForegroundColor Red
+    Write-Host 'Открой php.ini (команда: php --ini) и раскомментируй:' -ForegroundColor Yellow
+    Write-Host '  extension=pdo_mysql' -ForegroundColor Yellow
+    Write-Host '  extension=mysqli' -ForegroundColor Yellow
+    exit 1
+}
+Write-Host 'pdo_mysql: OK' -ForegroundColor Green
 
-if (Test-Path "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe") { 
-    $mysql = "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" 
-}
-elseif (Test-Path "C:\xampp\mysql\bin\mysql.exe") { 
-    $mysql = "C:\xampp\mysql\bin\mysql.exe" 
-}
-else {
-    $cmd = Get-Command mysql.exe -ErrorAction SilentlyContinue
-    if ($cmd) { $mysql = $cmd.Source }
-}
-
+Write-Host 'Ищу MySQL...'
+$mysql = Find-MysqlClient
 if (-not $mysql) {
-    Write-Host "ОШИБКА: MySQL не найден!" -ForegroundColor Red
-    Read-Host "Нажмите Enter"
-    exit
+    Write-Host 'ОШИБКА: mysql.exe не найден (проверь MySQL 8.x в Program Files).' -ForegroundColor Red
+    exit 1
 }
-
 Write-Host "MySQL: $mysql" -ForegroundColor Green
 
-# Переменные окружения
-$env:APP_DEBUG = "true"
-$env:APP_URL = "http://localhost:8080"
-$env:SESSION_SECURE = "false"
-$env:DB_HOST = "127.0.0.1"
-$env:DB_PORT = "3306"
-$env:DB_NAME = "furniture_platform"
-$env:DB_USER = "root"
-$env:DB_PASSWORD = ""
+$env:APP_DEBUG = 'true'
+$env:APP_URL = 'http://localhost:8080'
+$env:SESSION_SECURE = 'false'
+$env:DB_HOST = '127.0.0.1'
+$env:DB_PORT = '3306'
+$env:DB_NAME = 'furniture_platform'
+$env:DB_USER = 'root'
+if (-not $env:DB_PASSWORD) { $env:DB_PASSWORD = '' }
 
-# Путь к проекту
-$projectRoot = Split-Path -Parent $PSScriptRoot
+$mysqlArgs = @('-u', $env:DB_USER)
+if ($env:DB_PASSWORD) { $mysqlArgs += @("-p$($env:DB_PASSWORD)") }
 
-# Проверяем MySQL
-Write-Host "Проверка MySQL..."
-& $mysql -u root -e "SELECT 1" 2>$null
+Write-Host 'Проверка MySQL...'
+& $mysql @mysqlArgs -e 'SELECT 1' 2>$null | Out-Null
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "Запуск MySQL сервиса..."
-    net start MySQL80 2>$null
-    Start-Sleep -Seconds 3
+    Write-Host 'MySQL не отвечает, пробую запустить службу...' -ForegroundColor Yellow
+    Start-MysqlServiceIfNeeded
+    & $mysql @mysqlArgs -e 'SELECT 1' 2>$null | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host 'ОШИБКА: не удалось подключиться к MySQL. Проверь пароль: `$env:DB_PASSWORD = "..."`' -ForegroundColor Red
+        exit 1
+    }
 }
 
-# Проверяем БД
-Write-Host "Проверка базы данных..."
-& $mysql -u root -e "USE furniture_platform" 2>$null
+Write-Host 'Проверка базы furniture_platform...'
+& $mysql @mysqlArgs -e 'USE furniture_platform' 2>$null | Out-Null
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "Создание базы..."
-    $schemaPath = Join-Path $projectRoot "sql\schema.sql"
-    $sql = Get-Content $schemaPath -Raw -Encoding UTF8
-    $sql | & $mysql -u root 2>$null
+    Write-Host 'Создание базы из sql\schema.sql...'
+    $schemaPath = Join-Path $projectRoot 'sql\schema.sql'
+    Get-Content -Path $schemaPath -Raw -Encoding UTF8 | & $mysql @mysqlArgs 2>$null
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host 'ОШИБКА: не удалось применить schema.sql' -ForegroundColor Red
+        exit 1
+    }
 }
 
-Write-Host ""
-Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "Готово! Сайт запущен:" -ForegroundColor Green
-Write-Host "http://localhost:8080" -ForegroundColor Yellow
-Write-Host "Нажмите Ctrl+C для остановки" -ForegroundColor Cyan
-Write-Host "========================================" -ForegroundColor Cyan
-Write-Host ""
+Write-Host ''
+Write-Host '========================================' -ForegroundColor Cyan
+Write-Host 'Сайт: http://localhost:8080' -ForegroundColor Yellow
+Write-Host 'Конфигуратор: http://localhost:8080/product/1' -ForegroundColor Yellow
+Write-Host 'Остановка: Ctrl+C' -ForegroundColor Cyan
+Write-Host '========================================' -ForegroundColor Cyan
+Write-Host ''
 
-# Запуск сервера
-Push-Location $projectRoot
+Set-Location $projectRoot
 & $php -S localhost:8080 router.php
-Pop-Location
