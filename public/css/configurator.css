@@ -811,7 +811,7 @@ a:hover {
 }
 
 /* ================================================================
-   Интеграция с site layout (OPT-032)
+   Интеграция с site layout (OPT-032) — светлая палитра Quattro
    ================================================================ */
 body.page-product {
     --color-bg: #F4F7F9;
@@ -827,25 +827,59 @@ body.page-product {
 }
 
 body.page-product .product-page {
-    --color-bg: #0f1117;
-    --color-surface: #1a1d27;
-    --color-surface-2: #232638;
-    --color-border: #2e3248;
-    --color-border-focus: #4a6cf7;
-    --color-accent: #4a6cf7;
-    --color-accent-hover: #3a5ce6;
-    --color-accent-glow: rgba(74, 108, 247, 0.25);
-    --color-success: #22c55e;
-    --color-error: #ef4444;
+    --color-bg: #F4F7F9;
+    --color-surface: #ffffff;
+    --color-surface-2: #F4F7F9;
+    --color-border: #D1D5DB;
+    --color-border-focus: #5584E8;
+    --color-accent: #5584E8;
+    --color-accent-hover: #1F4ED8;
+    --color-accent-glow: rgba(85, 132, 232, 0.22);
+    --color-success: #16A34A;
+    --color-error: #DC2626;
     --color-warning: #f59e0b;
-    --color-text-primary: #e8eaf0;
-    --color-text-secondary: #8b90a7;
-    --color-text-muted: #5a5f7a;
-    background-color: var(--color-bg);
+    --color-text-primary: #111827;
+    --color-text-secondary: #475569;
+    --color-text-muted: #6B7280;
+    --shadow-sm: 0 8px 24px rgba(15, 23, 42, 0.08);
+    --shadow-md: 0 20px 40px rgba(15, 23, 42, 0.08);
+    --shadow-lg: 0 24px 48px rgba(15, 23, 42, 0.12);
+    --shadow-glow: 0 0 0 3px var(--color-accent-glow);
+
+    background-color: transparent;
     color: var(--color-text-primary);
-    border-radius: var(--radius-lg);
-    margin-top: 24px;
-    margin-bottom: 40px;
+    margin-top: 0;
+    margin-bottom: 0;
+    border-radius: 0;
+}
+
+body.page-product .configurator,
+body.page-product .gallery__main-image {
+    box-shadow: var(--shadow-sm);
+}
+
+body.page-product .option-card:hover,
+body.page-product .option-card:has(input[type="radio"]:checked),
+body.page-product .option-card:has(input[type="checkbox"]:checked) {
+    background-color: rgba(85, 132, 232, 0.06);
+}
+
+body.page-product .btn--primary {
+    box-shadow: none;
+}
+
+body.page-product .btn--primary:hover {
+    box-shadow: 0 8px 20px rgba(85, 132, 232, 0.28);
+}
+
+body.page-product .modal-overlay {
+    background: rgba(15, 23, 42, 0.45);
+}
+
+body.page-product .submit-error {
+    color: #b91c1c;
+    background: rgba(220, 38, 38, 0.08);
+    border-color: rgba(220, 38, 38, 0.25);
 }
 
 body.page-product .site-header a,
