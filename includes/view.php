@@ -13,7 +13,7 @@ require_once __DIR__ . '/../views/helpers.php';
  */
 function render(string $view, array $data = [], array $layout = []): void
 {
-    $viewFile = __DIR__ . '/../views/' . ltrim($view, '/\') . '.php';
+    $viewFile = __DIR__ . '/../views/' . ltrim($view, '/\\') . '.php';
 
     if (!file_exists($viewFile)) {
         throw new RuntimeException('View not found: ' . $viewFile);
