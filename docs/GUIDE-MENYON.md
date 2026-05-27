@@ -212,7 +212,15 @@ php -S localhost:8080 router.php
 > ./start-dev.sh           # то же что ./scripts/dev.sh
 > ```
 >
-> На Windows в **Git Bash** те же команды (если `php` и `mysql` в PATH).
+> На Windows в **Git Bash** те же команды. Если `php не в PATH` — скрипт ищет WinGet/XAMPP/MySQL 8.4 сам; иначе:
+>
+> ```bash
+> export PHP="/c/Users/Виктор/AppData/Local/Microsoft/WinGet/Packages/.../php.exe"
+> export MYSQL="/c/Program Files/MySQL/MySQL Server 8.4/bin/mysql.exe"
+> ./start-dev.sh
+> ```
+>
+> Проще на Windows: `start-dev.cmd` или PowerShell `.\start-dev.ps1`.
 
 ---
 

@@ -5,6 +5,8 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# shellcheck source=lib/find-tools.sh
+source "$ROOT/scripts/lib/find-tools.sh"
 cd "$ROOT"
 
 if [[ ! -f "$ROOT/router.php" ]]; then
@@ -12,18 +14,12 @@ if [[ ! -f "$ROOT/router.php" ]]; then
   exit 1
 fi
 
-# PHP
-PHP="${PHP:-}"
-if [[ -z "$PHP" ]]; then
-  if command -v php >/dev/null 2>&1; then
-    PHP="$(command -v php)"
-  elif [[ -x /opt/homebrew/bin/php ]]; then
-    PHP=/opt/homebrew/bin/php
-  else
-    echo "ОШИБКА: PHP не найден. macOS: brew install php"
-    exit 1
-  fi
-fi
+PHP="$(find_php_bin)" || {
+  echo "ОШИБКА: PHP не найден."
+  echo "  ./scripts/check-env.sh"
+  echo '  export PHP="/c/.../php.exe"   # Git Bash на Windows'
+  exit 1
+}
 
 if ! "$PHP" -r 'exit version_compare(PHP_VERSION, "8.2.0", ">=") ? 0 : 1);' 2>/dev/null; then
   echo "ОШИБКА: нужен PHP 8.2+"
@@ -33,24 +29,17 @@ fi
 
 if ! "$PHP" -m 2>/dev/null | grep -q '^pdo_mysql$'; then
   echo "ОШИБКА: расширение pdo_mysql не загружено."
-  echo "Открой php.ini (php --ini) и включи extension=pdo_mysql"
+  echo "Открой php.ini ($("$PHP" --ini)) и включи extension=pdo_mysql"
   exit 1
 fi
 
 echo "PHP: $PHP ($("$PHP" -v | head -1))"
 
-# MySQL
-MYSQL="${MYSQL:-}"
-if [[ -z "$MYSQL" ]]; then
-  if command -v mysql >/dev/null 2>&1; then
-    MYSQL="$(command -v mysql)"
-  elif [[ -x /opt/homebrew/bin/mysql ]]; then
-    MYSQL=/opt/homebrew/bin/mysql
-  else
-    echo "ОШИБКА: mysql не найден. macOS: brew install mysql"
-    exit 1
-  fi
-fi
+MYSQL="$(find_mysql_bin)" || {
+  echo "ОШИБКА: mysql не найден."
+  echo '  export MYSQL="/c/Program Files/MySQL/MySQL Server 8.4/bin/mysql.exe"'
+  exit 1
+}
 
 export APP_DEBUG="${APP_DEBUG:-true}"
 export APP_URL="${APP_URL:-http://localhost:8080}"
@@ -75,7 +64,7 @@ if ! "$MYSQL" "${MYSQL_ARGS[@]}" -e "SELECT 1" >/dev/null 2>&1; then
 fi
 
 if ! "$MYSQL" "${MYSQL_ARGS[@]}" -e "SELECT 1" >/dev/null 2>&1; then
-  echo "ОШИБКА: не удалось подключиться к MySQL."
+  echo "ОШИБКА: не удалось подключиться к MySQL (служба выключена?)"
   exit 1
 fi
 
