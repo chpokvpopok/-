@@ -135,4 +135,14 @@ $productImage = product_image($product['image_preview'] ?? null);
 
     <?php include __DIR__ . '/modal_order.php'; ?>
 
+    <section class="product-lead">
+        <h2 class="product-lead__title">Или оставьте заявку менеджеру</h2>
+        <p class="product-lead__text">Подготовим коммерческое предложение без оформления заказа.</p>
+        <?php
+        $leadSource = 'product';
+        $leadCompact = true;
+        require __DIR__ . '/../partials/lead-form.php';
+        ?>
+    </section>
+
 </main>

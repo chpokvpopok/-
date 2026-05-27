@@ -213,6 +213,8 @@ class OrderController
             return;
         }
 
+        $order['delivery_info'] = json_decode($order['delivery_info'] ?? '{}', true) ?: [];
+
         render('order/success', [
             'order' => $order,
             'pageTitle' => 'Заказ принят',

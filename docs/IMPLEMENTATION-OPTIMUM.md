@@ -118,9 +118,9 @@
 
 | Поле                 | Значение                                                          |
 | -------------------- | ----------------------------------------------------------------- |
-| **Последняя задача** | OPT-033 (пакет O4-Catalog)                                           |
-| **Следующая**        | **OPT-040** (пакет O5-Leads)                                    |
-| **Запуск**           | `./scripts/dev.sh` или `./sql/migrate.sh` → http://localhost:8080 |
+| **Последняя задача** | OPT-044 (пакет O5-Leads)                                          |
+| **Следующая**        | — дипломная версия «Оптимум» завершена                            |
+| **Запуск**           | `./scripts/dev.sh` или `./start-dev.ps1` → http://localhost:8080 |
 
 ### Уже готово ⚡
 
@@ -182,7 +182,7 @@ mysql -u root furniture_platform -e "DESCRIBE leads"
 
 ## OPT-002 — README: запуск для комиссии
 
-- [ ] **Зависимости:** нет (параллельно)
+- [x] **Зависимости:** нет (параллельно)
 
 **Файлы:** `README.md` (корень проекта)
 
@@ -195,7 +195,7 @@ mysql -u root furniture_platform -e "DESCRIBE leads"
 
 **Критерии приёмки:**
 
-- [ ] По README новый человек поднимает сайт за 5–10 мин
+- [x] По README новый человек поднимает сайт за 5–10 мин
 
 **Промпт:** `Реализуй пакет O1: OPT-001, OPT-002`
 
@@ -505,7 +505,7 @@ mysql -u root furniture_platform -e "DESCRIBE leads"
 
 ## OPT-040 — `LeadController` + `POST /api/lead/create`
 
-- [ ] **Зависимости:** OPT-001
+- [x] **Зависимости:** OPT-001
 
 **Файлы:** `controllers/LeadController.php`, `index.php`
 
@@ -532,7 +532,7 @@ curl -s -X POST http://localhost:8080/api/lead/create \
 
 ## OPT-041 — `partials/lead-form.php`
 
-- [ ] **Зависимости:** OPT-040
+- [x] **Зависимости:** OPT-040
 
 **Файлы:** `views/partials/lead-form.php`, `public/css/site.css` (форма)
 
@@ -550,7 +550,7 @@ curl -s -X POST http://localhost:8080/api/lead/create \
 
 ## OPT-042 — `site.js`: отправка lead-form
 
-- [ ] **Зависимости:** OPT-041, OPT-015
+- [x] **Зависимости:** OPT-041, OPT-015
 
 **Файлы:** `public/js/site.js`
 
@@ -568,7 +568,7 @@ curl -s -X POST http://localhost:8080/api/lead/create \
 
 ## OPT-043 — Блок «или оставьте заявку» на `/product/1`
 
-- [ ] **Зависимости:** OPT-041, OPT-042, OPT-032
+- [x] **Зависимости:** OPT-041, OPT-042, OPT-032
 
 **Файлы:** `views/product/card.php`
 
@@ -584,7 +584,7 @@ curl -s -X POST http://localhost:8080/api/lead/create \
 
 ## OPT-044 — Подключить lead-form на главной (OPT-025)
 
-- [ ] **Зависимости:** OPT-025, OPT-041
+- [x] **Зависимости:** OPT-025, OPT-041
 
 **Файлы:** `views/partials/sections/lead.php` или include в `home.php`
 
@@ -604,19 +604,19 @@ curl -s -X POST http://localhost:8080/api/lead/create \
 
 ## OPT-050 — `order/success` в layout
 
-- [ ] **Зависимости:** O2
+- [x] **Зависимости:** O2
 
 **Файлы:** `views/order/success.php`, `OrderController` (если нужен только view)
 
 **Критерии приёмки:**
 
-- [ ] После заказа — страница с header/footer
+- [x] После заказа — страница с header/footer
 
 ---
 
 ## OPT-051 — Чеклист QA для защиты
 
-- [ ] **Зависимости:** все пакеты O1–O5
+- [x] **Зависимости:** все пакеты O1–O5
 
 **Файлы:** `docs/QA-DIPLOMA.md`
 
@@ -630,7 +630,7 @@ curl -s -X POST http://localhost:8080/api/lead/create \
 
 ## OPT-052 — Обновить статус в этом файле + ссылка в README
 
-- [ ] **Зависимости:** OPT-051
+- [x] **Зависимости:** OPT-051
 
 **Шаги:**
 
@@ -645,21 +645,21 @@ curl -s -X POST http://localhost:8080/api/lead/create \
 
 ## Пакеты
 
-- [x] **O1-DB** — OPT-001 ⚡; OPT-002 README (опционально)
+- [x] **O1-DB** — OPT-001 ⚡; OPT-002 README
 - [x] **O2-Shell** — OPT-010..016
 - [x] **O3-Home** — OPT-020..025
 - [x] **O4-Catalog** — OPT-030..033
-- [ ] **O5-Leads** — OPT-040..044
-- [ ] **O6-Polish** — OPT-050..052
+- [x] **O5-Leads** — OPT-040..044
+- [x] **O6-Polish** — OPT-050..052
 
 ## MVP-критерии (всё должно быть ✓)
 
-- [ ] Сайт поднимается по README / `dev.sh`
-- [ ] Главная выглядит как корпоративный лендинг (не пустая сетка)
-- [ ] Каталог → товар → конфигуратор → заказ → success
-- [ ] Форма КП сохраняет лид в MySQL
-- [ ] CSRF на POST API
-- [ ] Нет падений PHP на основных URL
+- [x] Сайт поднимается по README / `dev.sh`
+- [x] Главная выглядит как корпоративный лендинг (не пустая сетка)
+- [x] Каталог → товар → конфигуратор → заказ → success
+- [x] Форма КП сохраняет лид в MySQL
+- [x] CSRF на POST API (заказы и лиды)
+- [x] Нет падений PHP на основных URL
 
 ---
 

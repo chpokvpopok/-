@@ -75,4 +75,90 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
+
+    document.querySelectorAll('.js-lead-form').forEach((form) => {
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            const messageEl = form.querySelector('.lead-form__message');
+            const submitBtn = form.querySelector('[type="submit"]');
+
+            const setMessage = (text, type = '') => {
+                if (!messageEl) {
+                    return;
+                }
+                messageEl.textContent = text;
+                messageEl.className = 'lead-form__message';
+                if (type) {
+                    messageEl.classList.add(`lead-form__message--${type}`);
+                }
+            };
+
+            const formData = new FormData(form);
+            const phoneRaw = String(formData.get('phone') ?? '').trim();
+            const phoneDigits = phoneRaw.replace(/\D/g, '');
+
+            const payload = {
+                name: String(formData.get('name') ?? '').trim(),
+                email: String(formData.get('email') ?? '').trim(),
+                phone: phoneRaw,
+                organization: String(formData.get('organization') ?? '').trim(),
+                comment: String(formData.get('comment') ?? '').trim(),
+                source: String(formData.get('source') ?? 'home').trim() || 'home',
+            };
+
+            if (payload.name.length < 2) {
+                setMessage('Укажите имя (минимум 2 символа).', 'error');
+                return;
+            }
+
+            if (!payload.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email)) {
+                setMessage('Укажите корректный email.', 'error');
+                return;
+            }
+
+            if (phoneDigits.length < 10) {
+                setMessage('Укажите телефон (минимум 10 цифр).', 'error');
+                return;
+            }
+
+            if (submitBtn instanceof HTMLButtonElement) {
+                submitBtn.disabled = true;
+            }
+            setMessage('Отправка…');
+
+            try {
+                const csrfRes = await fetch('/api/csrf-token', { credentials: 'same-origin' });
+                if (!csrfRes.ok) {
+                    throw new Error('Не удалось получить CSRF-токен.');
+                }
+
+                const csrfData = await csrfRes.json();
+                payload.csrf_token = csrfData.token;
+
+                const response = await fetch('/api/lead/create', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
+
+                const result = await response.json();
+
+                if (!response.ok || !result.success) {
+                    throw new Error(result.error || 'Не удалось отправить заявку.');
+                }
+
+                form.reset();
+                setMessage('Заявка отправлена. Менеджер свяжется с вами.', 'success');
+            } catch (error) {
+                const text = error instanceof Error ? error.message : 'Ошибка отправки.';
+                setMessage(text, 'error');
+            } finally {
+                if (submitBtn instanceof HTMLButtonElement) {
+                    submitBtn.disabled = false;
+                }
+            }
+        });
+    });
 });

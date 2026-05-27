@@ -511,8 +511,128 @@ a {
     grid-column: 1 / -1;
 }
 
+.lead-form__consent {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+}
+
+.lead-form__consent a {
+    color: var(--color-accent);
+}
+
+.lead-form__message {
+    min-height: 1.25em;
+    font-size: 0.95rem;
+}
+
+.lead-form__message--success {
+    color: #15803d;
+}
+
+.lead-form__message--error {
+    color: #b91c1c;
+}
+
+.lead-form--compact .lead-form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.product-lead {
+    margin-top: 48px;
+    padding-top: 40px;
+    border-top: 1px solid var(--color-border);
+}
+
+.product-lead__title {
+    margin: 0 0 8px;
+    font-size: 1.35rem;
+}
+
+.product-lead__text {
+    margin: 0 0 24px;
+    color: var(--color-text-secondary);
+}
+
+body.page-product .product-lead {
+    border-top-color: #2e3248;
+}
+
+body.page-product .product-lead__text {
+    color: var(--color-text-secondary);
+}
+
 @media (max-width: 860px) {
     .lead-form-grid {
         grid-template-columns: 1fr;
     }
+}
+
+.page-order-success__inner {
+    max-width: 680px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.page-order-success__icon {
+    font-size: 4rem;
+    margin-bottom: 16px;
+}
+
+.page-order-success__lead {
+    margin-bottom: 32px;
+}
+
+.page-order-success__lead strong {
+    color: var(--color-accent);
+}
+
+.page-order-success__details {
+    text-align: left;
+    margin-bottom: 32px;
+}
+
+.page-order-success__label {
+    margin-bottom: 16px;
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.page-order-success__list {
+    margin: 0;
+}
+
+.page-order-success__row {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.page-order-success__row:last-child {
+    border-bottom: none;
+}
+
+.page-order-success__row dt {
+    margin: 0;
+    color: var(--color-text-secondary);
+}
+
+.page-order-success__row dd {
+    margin: 0;
+    font-weight: 600;
+    text-align: right;
+}
+
+.page-order-success__status {
+    color: var(--color-success, #16a34a);
+}
+
+.page-order-success__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
 }

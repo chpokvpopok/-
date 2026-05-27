@@ -19,6 +19,7 @@
  *   GET  /api/product/{id}          → JSON: данные товара
  *   GET  /api/csrf-token            → JSON: CSRF-токен
  *   POST /api/order/create          → JSON: создание заказа
+ *   POST /api/lead/create           → JSON: заявка на КП
  *   GET  /order/success/{orderId}   → Страница подтверждения заказа
  *   GET  /cart                      → Корзина
  */
@@ -239,6 +240,14 @@ try {
         && $requestMethod === 'POST') {
         $controller = new App\Controllers\OrderController();
         $controller->createOrder();
+        exit;
+    }
+
+    // ---- POST /api/lead/create — заявка на КП --------------------
+    if ($section === 'api' && $param === 'lead' && $subParam === 'create'
+        && $requestMethod === 'POST') {
+        $controller = new App\Controllers\LeadController();
+        $controller->createLead();
         exit;
     }
 
