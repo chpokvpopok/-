@@ -17,8 +17,9 @@ return [
         'host'     => getenv('DB_HOST')     ?: 'localhost',
         'port'     => (int)(getenv('DB_PORT') ?: 3306),
         'name'     => getenv('DB_NAME')     ?: 'furniture_platform',
-        'user'     => getenv('DB_USER')     ?: 'furniture_user',
-        'password' => getenv('DB_PASSWORD') !== false ? getenv('DB_PASSWORD') : 'strong_password_here',
+        // XAMPP / локально: root без пароля. Docker/production: DB_USER / DB_PASSWORD.
+        'user'     => getenv('DB_USER') !== false && getenv('DB_USER') !== '' ? getenv('DB_USER') : 'root',
+        'password' => getenv('DB_PASSWORD') !== false ? getenv('DB_PASSWORD') : '',
     ],
 
     // ------------------------------------------------------------------
@@ -28,7 +29,8 @@ return [
         // Время жизни сессионного cookie (секунды): 0 = до закрытия браузера
         'lifetime'  => 0,
         // Передавать cookie только по HTTPS (для localhost: SESSION_SECURE=false)
-        'secure'    => filter_var(getenv('SESSION_SECURE') ?: 'true', FILTER_VALIDATE_BOOLEAN),
+        // На http://localhost cookie с Secure не сохранится — для XAMPP по умолчанию false.
+        'secure'    => filter_var(getenv('SESSION_SECURE') ?: 'false', FILTER_VALIDATE_BOOLEAN),
         // Запретить доступ к cookie из JavaScript (защита от XSS-кражи сессии)
         'httponly'  => true,
         // Строгая политика SameSite — защита от CSRF

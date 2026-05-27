@@ -112,9 +112,21 @@ $_SESSION['locale'] = $locale;
 // ------------------------------------------------------------------
 
 // Получаем чистый URI без query string и нормализуем
-$requestUri    = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
-$requestUri    = '/' . trim($requestUri, '/');
+$requestUri    = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
 $requestMethod = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
+
+// Сайт в подпапке (например /shop/ в htdocs) — убираем префикс из URI
+$scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? ''));
+if ($scriptDir !== '/' && $scriptDir !== '' && str_starts_with($requestUri, $scriptDir)) {
+    $requestUri = substr($requestUri, strlen($scriptDir)) ?: '/';
+}
+if ($requestUri === '/index.php') {
+    $requestUri = '/';
+}
+$requestUri = '/' . trim($requestUri, '/');
+if ($requestUri !== '/') {
+    $requestUri = rtrim($requestUri, '/');
+}
 
 // Разбиваем URI на сегменты: "/product/42" → ['product', '42']
 $segments = array_values(array_filter(explode('/', $requestUri)));
