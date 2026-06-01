@@ -12,9 +12,11 @@ if (-not (Test-Path (Join-Path $projectRoot 'router.php'))) {
 
 # Локальные настройки БД (не в git): скопируй db-local.ps1.example → db-local.ps1
 $dbLocalPath = Join-Path $projectRoot 'db-local.ps1'
+$dbLocalLoaded = $false
 if (Test-Path $dbLocalPath) {
     Write-Host 'Загружаю db-local.ps1' -ForegroundColor Cyan
     . $dbLocalPath
+    $dbLocalLoaded = $true
 }
 
 function Find-Executable {
@@ -122,6 +124,17 @@ function Invoke-MySql {
     }
 }
 
+function Get-MySqlArgs {
+    $args = @('-h', $env:DB_HOST, '-P', $env:DB_PORT, '-u', $env:DB_USER)
+    if ($env:DB_PASSWORD) { $args += @("-p$($env:DB_PASSWORD)") }
+    return $args
+}
+
+function Test-MySqlReady {
+    param([string]$MySqlExe)
+    return (Invoke-MySql -MySqlExe $MySqlExe -Arguments (Get-MySqlArgs + @('-e', 'SELECT 1'))) -eq 0
+}
+
 function Start-MysqlServiceIfNeeded {
     $services = Get-Service -ErrorAction SilentlyContinue |
         Where-Object { $_.Name -match 'mysql' -and $_.Status -ne 'Running' }
@@ -185,20 +198,40 @@ $env:DB_NAME = if ($env:DB_NAME) { $env:DB_NAME } else { 'furniture_platform' }
 $env:DB_USER = if ($env:DB_USER) { $env:DB_USER } else { 'root' }
 if (-not $env:DB_PASSWORD) { $env:DB_PASSWORD = '' }
 
-Write-Host "MySQL: $env:DB_USER@$env:DB_HOST`:$env:DB_PORT, база $env:DB_NAME" -ForegroundColor Cyan
-
-$mysqlArgs = @('-h', $env:DB_HOST, '-P', $env:DB_PORT, '-u', $env:DB_USER)
-if ($env:DB_PASSWORD) { $mysqlArgs += @("-p$($env:DB_PASSWORD)") }
+Write-Host "MySQL: $env:DB_USER@$env:DB_HOST`:$env:DB_PORT, база $env:DB_NAME$(if ($env:DB_PASSWORD) { ', пароль задан' } else { ', пароль пустой' })" -ForegroundColor Cyan
 
 Write-Host 'Проверка MySQL...'
-if ((Invoke-MySql -MySqlExe $mysql -Arguments ($mysqlArgs + @('-e', 'SELECT 1'))) -ne 0) {
+if (-not (Test-MySqlReady -MySqlExe $mysql)) {
     Write-Host 'MySQL не отвечает, пробую запустить службу...' -ForegroundColor Yellow
     Start-MysqlServiceIfNeeded
-    if ((Invoke-MySql -MySqlExe $mysql -Arguments ($mysqlArgs + @('-e', 'SELECT 1'))) -ne 0) {
-        Write-Host 'ОШИБКА: не удалось подключиться к MySQL. Задай пароль: $env:DB_PASSWORD = "..."' -ForegroundColor Red
-        exit 1
-    }
 }
+
+if (-not (Test-MySqlReady -MySqlExe $mysql) -and $env:DB_PORT -eq '3306') {
+    Write-Host 'Пробую порт 3307 (часто после переустановки MySQL)...' -ForegroundColor Yellow
+    $env:DB_PORT = '3307'
+    Write-Host "MySQL: $env:DB_USER@$env:DB_HOST`:$env:DB_PORT" -ForegroundColor Cyan
+}
+
+if (-not (Test-MySqlReady -MySqlExe $mysql)) {
+    Write-Host ''
+    Write-Host 'ОШИБКА: не удалось подключиться к MySQL.' -ForegroundColor Red
+    Write-Host "  Хост:   $env:DB_HOST`:$env:DB_PORT" -ForegroundColor Yellow
+    Write-Host "  Пользователь: $env:DB_USER" -ForegroundColor Yellow
+    if (-not $dbLocalLoaded) {
+        Write-Host ''
+        Write-Host '  Создай db-local.ps1 (см. db-local.ps1.example):' -ForegroundColor Yellow
+        Write-Host '    copy db-local.ps1.example db-local.ps1' -ForegroundColor Yellow
+        Write-Host '    notepad db-local.ps1   # пароль и порт 3307' -ForegroundColor Yellow
+    } else {
+        Write-Host '  db-local.ps1 загружен — проверь DB_PORT и DB_PASSWORD в файле.' -ForegroundColor Yellow
+    }
+    Write-Host ''
+    Write-Host '  Проверка вручную:' -ForegroundColor Yellow
+    Write-Host "    & `"$mysql`" -h $env:DB_HOST -P $env:DB_PORT -u $env:DB_USER -p -e `"SELECT 1`"" -ForegroundColor Yellow
+    exit 1
+}
+
+$mysqlArgs = Get-MySqlArgs
 
 Write-Host "Проверка базы $env:DB_NAME..."
 if ((Invoke-MySql -MySqlExe $mysql -Arguments ($mysqlArgs + @('-e', "USE $env:DB_NAME"))) -ne 0) {
