@@ -120,6 +120,7 @@ php -S localhost:8080 router.php
 | `миграция 002 ... не применилась` | `git pull`, пересоздай базу, запусти `.\start-dev.ps1`. Убедись, что 001 прошла до 002 |
 | `Failed to open file` с кракозябрами в пути | Проект в папке с кириллицей (`Проекты`, `Виктор`). Перенеси в `C:\dev\furniture_platform` или обнови `start-dev.ps1` (`git pull`) |
 | `Table products doesn't exist` на 002 | База пустая без `schema.sql`. `git pull` и снова `.\start-dev.ps1` (скрипт сам применит schema) |
+| В карточках «Quattro … - ???????» | Кириллица в БД испорчена при старом импорте. `git pull`, затем `.\start-dev.ps1` (миграция `010_repair_utf8_texts.sql`) или полный сброс базы |
 | Скрипты PowerShell заблокированы | `Set-ExecutionPolicy -Scope Process Bypass` или используй `start-dev.cmd` |
 
 ## Запуск на macOS / Linux
