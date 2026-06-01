@@ -12,7 +12,7 @@ USE furniture_platform;
 
 -- -------------------------------------------------------------
 -- Таблица пользователей системы
--- Роли: client — покупатель, manager — менеджер заказов, admin — суперадмин
+-- Роли: client - покупатель, manager - менеджер заказов, admin - суперадмин
 -- -------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS users (
     id            INT UNSIGNED     NOT NULL AUTO_INCREMENT,
@@ -66,7 +66,7 @@ CREATE TABLE IF NOT EXISTS products (
                     COMMENT 'Базовая цена базовой конфигурации, тенге',
     image_preview   VARCHAR(500)               COMMENT 'Путь к превью-изображению',
     active          TINYINT(1)        NOT NULL DEFAULT 1
-                    COMMENT '1 — опубликован, 0 — скрыт',
+                    COMMENT '1 - опубликован, 0 - скрыт',
     sku             VARCHAR(100)      NOT NULL COMMENT 'Артикул (Stock Keeping Unit)',
     created_at      DATETIME          NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -89,7 +89,7 @@ CREATE TABLE IF NOT EXISTS products (
 -- Таблица конфигурационных опций товаров
 -- Примеры опций: Материал столешницы (select),
 --                LED-подсветка (checkbox), Блок розеток (checkbox)
--- price_modifier — надбавка к base_price (может быть отрицательной)
+-- price_modifier - надбавка к base_price (может быть отрицательной)
 -- -------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS product_options (
     id              INT UNSIGNED     NOT NULL AUTO_INCREMENT,
@@ -98,8 +98,8 @@ CREATE TABLE IF NOT EXISTS product_options (
     option_name_kk  VARCHAR(200)     NOT NULL COMMENT 'Название опции (KK)',
     option_type     ENUM('select','checkbox')
                                      NOT NULL DEFAULT 'select',
-    option_value_ru VARCHAR(200)              COMMENT 'Значение опции — для select (RU)',
-    option_value_kk VARCHAR(200)              COMMENT 'Значение опции — для select (KK)',
+    option_value_ru VARCHAR(200)              COMMENT 'Значение опции - для select (RU)',
+    option_value_kk VARCHAR(200)              COMMENT 'Значение опции - для select (KK)',
     option_group    VARCHAR(100)              COMMENT 'Группировка опций одного select',
     price_modifier  DECIMAL(12, 2)   NOT NULL DEFAULT 0.00
                     COMMENT 'Прибавка к итоговой цене, тенге',
@@ -126,7 +126,7 @@ CREATE TABLE IF NOT EXISTS product_options (
 -- -------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS orders (
     id            INT UNSIGNED     NOT NULL AUTO_INCREMENT,
-    user_id       INT UNSIGNED              COMMENT 'NULL — гостевой заказ',
+    user_id       INT UNSIGNED              COMMENT 'NULL - гостевой заказ',
     total_price   DECIMAL(14, 2)   NOT NULL DEFAULT 0.00
                   COMMENT 'Итоговая сумма заказа, тенге',
     status        ENUM('new','processing','production','ready','shipped','done')
@@ -153,9 +153,9 @@ CREATE TABLE IF NOT EXISTS orders (
 
 -- -------------------------------------------------------------
 -- Таблица позиций заказа (строки корзины)
--- selected_options_json — снимок выбранных опций на момент заказа:
+-- selected_options_json - снимок выбранных опций на момент заказа:
 --   [{"option_id":3,"option_name_ru":"HPL-пластик","price_modifier":15000}, ...]
--- Снимок хранится намеренно — цена опции может измениться, но
+-- Снимок хранится намеренно - цена опции может измениться, но
 -- зафиксированный заказ должен сохранять историческое значение.
 -- -------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS order_items (
@@ -231,7 +231,7 @@ INSERT INTO product_options
     (product_id, option_name_ru, option_name_kk, option_type,
      option_value_ru, option_value_kk, option_group, price_modifier, sort_order)
 VALUES
--- Группа: Материал столешницы (select — взаимоисключающий выбор)
+-- Группа: Материал столешницы (select - взаимоисключающий выбор)
 (1, 'Материал столешницы', 'Үстел материалы', 'select',
  'ЛДСП стандарт', 'ЛДСП стандарт', 'material', 0.00, 1),
 (1, 'Материал столешницы', 'Үстел материалы', 'select',
@@ -245,7 +245,7 @@ VALUES
 (1, 'Конфигурация', 'Конфигурация', 'select',
  'Радиусная', 'Радиустық', 'config', 60000.00, 5),
 
--- Дополнительные опции (checkbox — независимый выбор)
+-- Дополнительные опции (checkbox - независимый выбор)
 (1, 'Блок розеток и USB', 'Розетка және USB блогы',
  'checkbox', NULL, NULL, 'extras', 18000.00, 6),
 (1, 'Система климат-контроля', 'Климат бақылау жүйесі',

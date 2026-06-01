@@ -157,7 +157,7 @@ function Invoke-MySql {
     if (-not $done) {
         Stop-Job -Job $job -Force
         Remove-Job -Job $job -Force
-        $script:LastMySqlOutput = "Таймаут ${TimeoutSec}s — проверь DB_PORT и DB_PASSWORD в db-local.ps1"
+        $script:LastMySqlOutput = "Таймаут ${TimeoutSec}s - проверь DB_PORT и DB_PASSWORD в db-local.ps1"
         return 124
     }
 
@@ -272,7 +272,7 @@ if (-not $mysqlOk) {
         Write-Host '    copy db-local.ps1.example db-local.ps1' -ForegroundColor Yellow
         Write-Host '    notepad db-local.ps1   # пароль и порт 3307' -ForegroundColor Yellow
     } else {
-        Write-Host '  db-local.ps1 загружен — проверь DB_PORT и DB_PASSWORD в файле.' -ForegroundColor Yellow
+        Write-Host '  db-local.ps1 загружен - проверь DB_PORT и DB_PASSWORD в файле.' -ForegroundColor Yellow
     }
     exit 1
 }

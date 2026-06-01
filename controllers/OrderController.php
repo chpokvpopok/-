@@ -79,7 +79,7 @@ class OrderController
      */
     public function generateCsrfToken(): string
     {
-        // random_bytes() — CSPRNG, безопаснее mt_rand() / uniqid()
+        // random_bytes() - CSPRNG, безопаснее mt_rand() / uniqid()
         $token = bin2hex(random_bytes(32));
         $_SESSION['csrf_token'] = $token;
         return $token;
@@ -209,7 +209,7 @@ class OrderController
 
         if ($order === null) {
             http_response_code(404);
-            render('errors/404', ['pageTitle' => '404 — Страница не найдена']);
+            render('errors/404', ['pageTitle' => '404 - Страница не найдена']);
             return;
         }
 
@@ -257,7 +257,7 @@ class OrderController
                 );
             }
 
-            // product_id — целое положительное число
+            // product_id - целое положительное число
             $productId = filter_var($item['product_id'] ?? 0,
                                     FILTER_VALIDATE_INT,
                                     ['options' => ['min_range' => 1]]);
@@ -267,7 +267,7 @@ class OrderController
                 );
             }
 
-            // quantity — целое от 1 до MAX_QTY
+            // quantity - целое от 1 до MAX_QTY
             $quantity = filter_var($item['quantity'] ?? 1,
                                    FILTER_VALIDATE_INT,
                                    ['options' => ['min_range' => 1, 'max_range' => self::MAX_QTY]]);
@@ -277,7 +277,7 @@ class OrderController
                 );
             }
 
-            // selected_options — массив целых чисел (может быть пустым)
+            // selected_options - массив целых чисел (может быть пустым)
             $rawOptions = $item['selected_options'] ?? [];
             if (!is_array($rawOptions)) {
                 throw new InvalidArgumentException(
@@ -329,7 +329,7 @@ class OrderController
 
         // Обязательные поля
         if (mb_strlen($name) < 2 || mb_strlen($name) > 150) {
-            throw new InvalidArgumentException('Укажите корректное имя (2–150 символов).');
+            throw new InvalidArgumentException('Укажите корректное имя (2-150 символов).');
         }
 
         // Валидация телефона: допускаем форматы +7XXXXXXXXXX или 8XXXXXXXXXX
@@ -385,7 +385,7 @@ class OrderController
                 $optionIds = $item['selected_options'];
 
                 // --- Получаем базовую цену товара из БД ---
-                // Это критически важно: нельзя доверять цене, переданной клиентом —
+                // Это критически важно: нельзя доверять цене, переданной клиентом -
                 // клиентская часть хранит отображаемые цены, реальные берём из БД.
                 $productStmt = $this->db->prepare(
                     'SELECT id, base_price FROM products WHERE id = :id AND active = 1 LIMIT 1'
@@ -483,13 +483,13 @@ class OrderController
                 ]);
             }
 
-            // Всё прошло успешно — фиксируем транзакцию
+            // Всё прошло успешно - фиксируем транзакцию
             $this->db->commit();
 
             return $orderId;
 
         } catch (\Throwable $e) {
-            // При любой ошибке откатываем транзакцию — частичных заказов не будет
+            // При любой ошибке откатываем транзакцию - частичных заказов не будет
             $this->db->rollBack();
             throw $e;
         }
@@ -516,7 +516,7 @@ class OrderController
 
     /**
      * Очищает строку от пробелов и экранирует HTML-спецсимволы.
-     * htmlspecialchars с ENT_QUOTES экранирует как " так и ' —
+     * htmlspecialchars с ENT_QUOTES экранирует как " так и ' -
      * защита от XSS при последующем выводе в HTML-контексте.
      *
      * @param mixed  $value   Входное значение

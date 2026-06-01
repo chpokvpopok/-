@@ -1,4 +1,4 @@
-# Furniture Platform — дипломная версия
+# Furniture Platform - дипломная версия
 
 Веб-платформа мебельного производства с **онлайн-конфигуратором**, оформлением заказа в MySQL и формой заявки на КП.
 
@@ -75,10 +75,10 @@ Get-Content sql\migrations\003_seed_content.sql -Raw -Encoding UTF8 | mysql -u r
 
 ### 3. Запуск сервера
 
-**Вариант A — скрипт (рекомендуется):**
+**Вариант A - скрипт (рекомендуется):**
 
 ```powershell
-# Если блокируется ExecutionPolicy — только для текущего окна:
+# Если блокируется ExecutionPolicy - только для текущего окна:
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\start-dev.ps1
 ```
@@ -89,7 +89,7 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 start-dev.cmd
 ```
 
-**Вариант B — вручную (php -S):**
+**Вариант B - вручную (php -S):**
 
 ```powershell
 cd C:\path\to\furniture_platform
@@ -98,7 +98,7 @@ $env:SESSION_SECURE = "false"
 php -S localhost:8080 router.php
 ```
 
-Открой http://localhost:8080 — должна открыться главная с шапкой и подвалом.
+Открой http://localhost:8080 - должна открыться главная с шапкой и подвалом.
 
 Остановка: `Ctrl+C` в окне терминала.
 
@@ -123,13 +123,13 @@ mysql -u root < sql/schema.sql
 ## Структура проекта
 
 ```
-index.php          — маршруты (front controller)
-router.php         — точка входа для php -S
-controllers/       — ProductController, OrderController, LeadController
-views/             — шаблоны страниц и layout
-public/css|js/     — site.css (сайт), configurator.css/js (товар)
-sql/               — schema.sql и миграции
-docs/              — план и QA для диплома
+index.php          - маршруты (front controller)
+router.php         - точка входа для php -S
+controllers/       - ProductController, OrderController, LeadController
+views/             - шаблоны страниц и layout
+public/css|js/     - site.css (сайт), configurator.css/js (товар)
+sql/               - schema.sql и миграции
+docs/              - план и QA для диплома
 ```
 
 ## API (для проверки)
@@ -142,4 +142,4 @@ curl -s http://localhost:8080/api/csrf-token
 curl -s http://localhost:8080/api/product/1
 ```
 
-Полные примеры curl для заказа и лида — в [docs/QA-DIPLOMA.md](docs/QA-DIPLOMA.md).
+Полные примеры curl для заказа и лида - в [docs/QA-DIPLOMA.md](docs/QA-DIPLOMA.md).

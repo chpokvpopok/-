@@ -1,6 +1,6 @@
 <?php
 /**
- * router.php — точка входа для встроенного сервера PHP (php -S).
+ * router.php - точка входа для встроенного сервера PHP (php -S).
  * Эмулирует mod_rewrite: статика отдаётся как есть, остальное → index.php.
  */
 declare(strict_types=1);

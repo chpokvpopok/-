@@ -1,13 +1,13 @@
 # Контекст проекта для Gemini Notebook
-## ИС «Quattro» — веб-платформа домашней мебели с онлайн-конфигуратором
+## ИС «Quattro» - веб-платформа домашней мебели с онлайн-конфигуратором
 
-> **Как использовать:** загрузи этот файл в Notebook Gemini (или вставь целиком в «Источники» / системную инструкцию блокнота). При каждом новом чате в блокноте Gemini уже будет знать проект — тогда проси «напиши промпт для Cursor» или «сформулируй задачу для агента».
+> **Как использовать:** загрузи этот файл в Notebook Gemini (или вставь целиком в «Источники» / системную инструкцию блокнота). При каждом новом чате в блокноте Gemini уже будет знать проект - тогда проси «напиши промпт для Cursor» или «сформулируй задачу для агента».
 
 ---
 
 ## 1. Суть проекта (одним абзацем)
 
-**Дипломный full-stack на PHP 8.2 + MySQL без фреймворков.** Бренд интерфейса: **Quattro** — домашняя мебель (спальня, гостиная, кухня, домашний офис, прихожая, детская). Раньше в схеме была «диспетчерская мебель ETEO»; контент и миграции **004+** перевели каталог на домашнюю мебель, но в коде/БД могут остаться старые SKU (`ETEO-D1-BASE` маппится на `BEDROOM-SET-01` в `views/helpers.php`).
+**Дипломный full-stack на PHP 8.2 + MySQL без фреймворков.** Бренд интерфейса: **Quattro** - домашняя мебель (спальня, гостиная, кухня, домашний офис, прихожая, детская). Раньше в схеме была «диспетчерская мебель ETEO»; контент и миграции **004+** перевели каталог на домашнюю мебель, но в коде/БД могут остаться старые SKU (`ETEO-D1-BASE` маппится на `BEDROOM-SET-01` в `views/helpers.php`).
 
 **Главная ценность для защиты:** онлайн-конфигуратор с пересчётом цены + запись заказа в БД через REST API с CSRF + отдельная таблица заявок `leads`. Референс UX когда-то был eteo.ru; сейчас это **не клон**, а упрощённый корпоративный лендинг + каталог + конфигуратор.
 
@@ -26,7 +26,7 @@
 | Сервер dev | `php -S localhost:8080 router.php` через `./scripts/dev.sh` |
 | Prod-идея | Apache + `.htaccess` → `index.php` |
 
-**Не делать без явной просьбы:** админка, Laravel/Symfony, React, мультиязычный UI (RU/KK в БД есть, UI — русский), email-рассылки, Docker как обязательность, полный клон eteo.ru.
+**Не делать без явной просьбы:** админка, Laravel/Symfony, React, мультиязычный UI (RU/KK в БД есть, UI - русский), email-рассылки, Docker как обязательность, полный клон eteo.ru.
 
 **Язык ответов пользователю:** русский.
 
@@ -97,12 +97,12 @@
 **База:** `furniture_platform`, utf8mb4.
 
 **Основные таблицы:**
-- `categories` — slug: bedroom, living-room, kitchen, home-office, entryway, kids
-- `products` — base_price, image_preview, sku, slug, active, category_id, series_id
-- `product_options` — option_type: select|checkbox, option_group: material|config|extras, price_modifier
-- `orders`, `order_items` — заказ; options снимаются в JSON
-- `leads` — заявки КП (source: home|cases|contacts|product)
-- `pages`, `cases`, `faq_items`, `site_settings`, `product_series` — контент (частично статика в PHP)
+- `categories` - slug: bedroom, living-room, kitchen, home-office, entryway, kids
+- `products` - base_price, image_preview, sku, slug, active, category_id, series_id
+- `product_options` - option_type: select|checkbox, option_group: material|config|extras, price_modifier
+- `orders`, `order_items` - заказ; options снимаются в JSON
+- `leads` - заявки КП (source: home|cases|contacts|product)
+- `pages`, `cases`, `faq_items`, `site_settings`, `product_series` - контент (частично статика в PHP)
 
 **Развёртывание:** `schema.sql` → все файлы в `sql/migrations/` по порядку (`dev.sh` применяет автоматически).
 
@@ -114,10 +114,10 @@
 ## 7. Конфигуратор (бизнес-логика)
 
 1. Опции товара в `product_options`; группы `material`, `config`, `extras`.
-2. **select** — одно значение в группе; **checkbox** — несколько.
-3. Цена на клиенте: `base_price + Σ price_modifier` (проверка при заказе — снова из БД в `OrderController::persistOrder`).
-4. Тексты групп для UI — в `product_configurator_meta($sku)` в `views/helpers.php`.
-5. На главной — карусель/сетка моделей с опциями: `filter_configurable_products()`, partials `configurator-carousel.php`, `configurator-models-grid.php`.
+2. **select** - одно значение в группе; **checkbox** - несколько.
+3. Цена на клиенте: `base_price + Σ price_modifier` (проверка при заказе - снова из БД в `OrderController::persistOrder`).
+4. Тексты групп для UI - в `product_configurator_meta($sku)` в `views/helpers.php`.
+5. На главной - карусель/сетка моделей с опциями: `filter_configurable_products()`, partials `configurator-carousel.php`, `configurator-models-grid.php`.
 
 ---
 
@@ -125,12 +125,12 @@
 
 - Единый дизайн `site.css` (убраны отдельные темы site-warm/luxury/…).
 - Категории домашней мебели + изображения в `public/images/categories/`, `public/images/products/`.
-- Миграции 005–009: картинки, цены, упрощение кресла, переименования.
+- Миграции 005-009: картинки, цены, упрощение кресла, переименования.
 - Slug-URL товаров (`/product/bedroom-set-1`).
 - Страница privacy, блок конфигуратора на главной.
 - Документы для диплома: листинг серверной части + SQL.
 
-**Документация может отставать:** `QA-DIPLOMA.md` и `IMPLEMENTATION-OPTIMUM.md` ещё упоминают ETEO/диспетчерскую — **источник правды: код и миграции 004+**, UI Quattro.
+**Документация может отставать:** `QA-DIPLOMA.md` и `IMPLEMENTATION-OPTIMUM.md` ещё упоминают ETEO/диспетчерскую - **источник правды: код и миграции 004+**, UI Quattro.
 
 ---
 
@@ -160,10 +160,10 @@ Windows: `start-dev.ps1` / `start-dev.cmd`, см. `README.md`.
 
 ## 11. Как Gemini должен писать «норм промпты» для Cursor / другого ИИ
 
-Когда пользователь просит промпт — выдавай **готовый блок на русском**, структура:
+Когда пользователь просит промпт - выдавай **готовый блок на русском**, структура:
 
 ```
-Контекст: [1–2 предложения — что за проект Quattro, PHP без фреймворка]
+Контекст: [1-2 предложения - что за проект Quattro, PHP без фреймворка]
 Цель: [конкретный измеримый результат]
 Файлы: [точные пути, которые трогать]
 Ограничения: [минимальный diff, не трогать X, стиль как в соседних файлах, без новых зависимостей]
@@ -184,7 +184,7 @@ Windows: `start-dev.ps1` / `start-dev.cmd`, см. `README.md`.
 
 **Для правок API:** напоминать про CSRF, cookies, формат JSON из `OrderController::createOrder`.
 
-**Для БД:** новые поля — отдельный файл `sql/migrations/0XX_название.sql`, идемпотентно где возможно.
+**Для БД:** новые поля - отдельный файл `sql/migrations/0XX_название.sql`, идемпотентно где возможно.
 
 ---
 
@@ -230,7 +230,7 @@ Windows: `start-dev.ps1` / `start-dev.cmd`, см. `README.md`.
 |------|-----------|
 | Бренд UI | Quattro |
 | Старый код/демо | ETEO, диспетчерская (legacy в schema.sql seed) |
-| Реальный каталог | миграция 004 + 005–009 |
+| Реальный каталог | миграция 004 + 005-009 |
 | Сервер | `controllers/`, `index.php` |
 | Клиент | `public/js/`, `public/css/` |
 | Шаблоны | `views/` (не путать с API-логикой) |
@@ -239,7 +239,7 @@ Windows: `start-dev.ps1` / `start-dev.cmd`, см. `README.md`.
 
 ## 14. Частые вопросы пользователя
 
-- **Листинг для диплома** → `docs/листинг-серверная-часть-полный.txt` (PHP + SQL schema 001–002).
+- **Листинг для диплома** → `docs/листинг-серверная-часть-полный.txt` (PHP + SQL schema 001-002).
 - **Сценарий защиты** → `docs/QA-DIPLOMA.md` (обновить под Quattro при расхождении).
 - **Почему нет Composer** → осознанно, дипломная простота.
 - **Корзина** → маршрут есть, полноценная логика не в фокусе диплома; заказ из конфигуратора.
@@ -251,4 +251,4 @@ Windows: `start-dev.ps1` / `start-dev.cmd`, см. `README.md`.
 - Обновлено: 2026-06-02
 - Ветка/состояние: активная разработка UI домашней мебели, миграции до 009, единый `site.css`.
 
-При изменении архитектуры или бренда — **обнови этот файл** и перезагрузи в Gemini Notebook.
+При изменении архитектуры или бренда - **обнови этот файл** и перезагрузи в Gemini Notebook.

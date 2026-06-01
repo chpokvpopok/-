@@ -182,7 +182,7 @@ function filter_configurable_products(array $products): array
 }
 
 /**
- * Подпись варианта в конфигураторе: для select — значение (Велюр), для checkbox — название опции.
+ * Подпись варианта в конфигураторе: для select - значение (Велюр), для checkbox - название опции.
  */
 function option_choice_label(array $option): string
 {

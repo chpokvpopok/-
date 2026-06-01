@@ -8,8 +8,8 @@ USE furniture_platform;
 -- Превью существующих конфигурируемых моделей
 UPDATE products SET
     image_preview = '/public/images/products/bedroom-set.jpg',
-    name_ru = 'Quattro Bedroom D1 — спальный гарнитур',
-    name_kk = 'Quattro Bedroom D1 — ұйқы жиынтығы',
+    name_ru = 'Quattro Bedroom D1 - спальный гарнитур',
+    name_kk = 'Quattro Bedroom D1 - ұйқы жиынтығы',
     description_ru = 'Двуспальная кровать, прикроватные тумбы и шкаф. Настройте обивку, размер спального места и дополнительные модули.',
     description_kk = 'Екі орындық төсек, тумбалар және шкаф. Жиһазды өз қалауыңыз бойынша теңшеңіз.',
     base_price = 690000.00
@@ -17,8 +17,8 @@ WHERE sku IN ('BEDROOM-SET-01', 'ETEO-D1-BASE');
 
 UPDATE products SET
     image_preview = '/public/images/products/living-room-set.jpg',
-    name_ru = 'Quattro Living M3 — гостиная модульная',
-    name_kk = 'Quattro Living M3 — модульдік гостиная',
+    name_ru = 'Quattro Living M3 - гостиная модульная',
+    name_kk = 'Quattro Living M3 - модульдік гостиная',
     description_ru = 'Угловой диван, кресла и ТВ-зона. Выберите обивку, форму дивана и дополнительные модули.',
     description_kk = 'Бұрыштық диван, креслалар және ТВ-аймағы. Материал мен конфигурацияны таңдаңыз.',
     base_price = 980000.00
@@ -29,8 +29,8 @@ INSERT INTO products
     (category_id, name_ru, name_kk, description_ru, description_kk, base_price, sku, active, image_preview, slug)
 SELECT
     c.id,
-    'Quattro Kitchen K1 — обеденная группа',
-    'Quattro Kitchen K1 — ас үй тобы',
+    'Quattro Kitchen K1 - обеденная группа',
+    'Quattro Kitchen K1 - ас үй тобы',
     'Обеденный стол и стулья для кухни-столовой. Настройте столешницу, размер стола и комплектацию.',
     'Ас үй-асханаға арналған үстел мен орындықтар.',
     420000.00,
@@ -55,7 +55,7 @@ ON DUPLICATE KEY UPDATE
 -- Дополнительные модели каталога (без полного конфигуратора)
 INSERT INTO products
     (category_id, name_ru, name_kk, description_ru, description_kk, base_price, sku, active, image_preview, slug)
-SELECT c.id, 'Quattro Office O1 — рабочий кабинет', 'Quattro Office O1',
+SELECT c.id, 'Quattro Office O1 - рабочий кабинет', 'Quattro Office O1',
     'Письменный стол, стеллаж и кресло для домашнего офиса.', 'Үйлік офис жиынтығы.',
     385000.00, 'HOME-OFFICE-01', 1, '/public/images/products/home-office.jpg', 'home-office-01'
 FROM categories c WHERE c.slug = 'home-office' LIMIT 1
@@ -63,7 +63,7 @@ ON DUPLICATE KEY UPDATE name_ru = VALUES(name_ru), image_preview = VALUES(image_
 
 INSERT INTO products
     (category_id, name_ru, name_kk, description_ru, description_kk, base_price, sku, active, image_preview, slug)
-SELECT c.id, 'Quattro Entry E1 — прихожая', 'Quattro Entry E1',
+SELECT c.id, 'Quattro Entry E1 - прихожая', 'Quattro Entry E1',
     'Обувница, вешалка и зеркало в едином стиле.', 'Кіреберіс жиынтығы.',
     195000.00, 'ENTRYWAY-01', 1, '/public/images/products/entryway.jpg', 'entryway-01'
 FROM categories c WHERE c.slug = 'entryway' LIMIT 1
@@ -71,7 +71,7 @@ ON DUPLICATE KEY UPDATE name_ru = VALUES(name_ru), image_preview = VALUES(image_
 
 INSERT INTO products
     (category_id, name_ru, name_kk, description_ru, description_kk, base_price, sku, active, image_preview, slug)
-SELECT c.id, 'Quattro Kids K1 — детская', 'Quattro Kids K1',
+SELECT c.id, 'Quattro Kids K1 - детская', 'Quattro Kids K1',
     'Кровать, стол и система хранения для детской комнаты.', 'Балалар бөлмесі жиынтығы.',
     510000.00, 'KIDS-ROOM-01', 1, '/public/images/products/kids-room.jpg', 'kids-room-01'
 FROM categories c WHERE c.slug = 'kids' LIMIT 1

@@ -1,13 +1,13 @@
 <?php
 /**
- * Database.php — Singleton-обёртка над PDO
+ * Database.php - Singleton-обёртка над PDO
  *
  * Принципы безопасности:
  *  - Учётные данные хранятся в конфиге, а не в коде
- *  - PDO::ERRMODE_EXCEPTION — все ошибки превращаются в исключения
- *  - PDO::ATTR_EMULATE_PREPARES = false — нативные prepared statements
+ *  - PDO::ERRMODE_EXCEPTION - все ошибки превращаются в исключения
+ *  - PDO::ATTR_EMULATE_PREPARES = false - нативные prepared statements
  *    (исключает возможность SQL-инъекции через эмуляцию на уровне PDO)
- *  - PDO::ATTR_DEFAULT_FETCH_MODE = FETCH_ASSOC — удобный формат по умолчанию
+ *  - PDO::ATTR_DEFAULT_FETCH_MODE = FETCH_ASSOC - удобный формат по умолчанию
  */
 
 declare(strict_types=1);
@@ -23,14 +23,14 @@ final class Database
     private static ?PDO $instance = null;
 
     /**
-     * Запрещаем прямое создание экземпляров — только через getInstance().
+     * Запрещаем прямое создание экземпляров - только через getInstance().
      */
     private function __construct() {}
     private function __clone() {}
 
     /**
      * Возвращает единственный экземпляр PDO-соединения (паттерн Singleton).
-     * При первом вызове создаёт соединение, при последующих — возвращает кешированное.
+     * При первом вызове создаёт соединение, при последующих - возвращает кешированное.
      *
      * @throws RuntimeException если соединение не удалось установить
      */
@@ -50,7 +50,7 @@ final class Database
             $options = [
                 PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                // ОБЯЗАТЕЛЬНО false — иначе PDO эмулирует prepared statements
+                // ОБЯЗАТЕЛЬНО false - иначе PDO эмулирует prepared statements
                 // через конкатенацию строк, сводя защиту от SQLi к нулю
                 PDO::ATTR_EMULATE_PREPARES   => false,
                 // Устанавливаем кодировку на уровне соединения
@@ -62,7 +62,7 @@ final class Database
             try {
                 self::$instance = new PDO($dsn, $db['user'], $db['password'], $options);
             } catch (PDOException $e) {
-                // Намеренно НЕ включаем оригинальное сообщение в публичный ответ —
+                // Намеренно НЕ включаем оригинальное сообщение в публичный ответ -
                 // оно может содержать учётные данные или детали схемы.
                 throw new RuntimeException(
                     'Ошибка подключения к базе данных. Обратитесь к администратору.',

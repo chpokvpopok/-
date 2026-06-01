@@ -3,8 +3,8 @@
  * views/partials/lead-form.php
  *
  * Переменные (опционально):
- *   $leadSource  — home|product|cases|contacts (по умолчанию home)
- *   $leadCompact — true для компактной версии на странице товара
+ *   $leadSource  - home|product|cases|contacts (по умолчанию home)
+ *   $leadCompact - true для компактной версии на странице товара
  */
 
 declare(strict_types=1);

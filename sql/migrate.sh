@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================
-# migrate.sh — применение SQL-миграций по порядку (001, 002, 003)
+# migrate.sh - применение SQL-миграций по порядку (001, 002, 003)
 #
 # Использование:
 #   ./sql/migrate.sh
@@ -8,7 +8,7 @@
 #
 # Переменные окружения (как в config.php / dev.sh):
 #   DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
-#   MYSQL — путь к клиенту mysql (по умолчанию: mysql)
+#   MYSQL - путь к клиенту mysql (по умолчанию: mysql)
 # =============================================================
 
 set -euo pipefail
@@ -45,7 +45,7 @@ run_sql() {
 
 # База должна существовать (schema.sql из dev.sh или вручную)
 if ! "$MYSQL_BIN" "${mysql_args[@]}" -e "USE \`$DB_NAME\`" 2>/dev/null; then
-  log "База $DB_NAME не найдена — инициализация из schema.sql"
+  log "База $DB_NAME не найдена - инициализация из schema.sql"
   if [[ ! -f "$ROOT/sql/schema.sql" ]]; then
     err "Не найден $ROOT/sql/schema.sql"
   fi

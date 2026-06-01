@@ -17,7 +17,7 @@ if ($configurableProducts === []) {
 <section class="section section--sm configurator-models-grid" aria-labelledby="configurator-models-grid-title">
     <div class="container">
         <h2 id="configurator-models-grid-title" class="section__title">Все модели конфигуратора</h2>
-        <p class="section__text">Выберите другую модель — настройки и цена откроются на отдельной странице.</p>
+        <p class="section__text">Выберите другую модель - настройки и цена откроются на отдельной странице.</p>
         <div class="home-grid">
             <?php foreach ($configurableProducts as $item): ?>
                 <?php $isCurrent = ($item['slug'] ?? '') === $currentProductSlug; ?>

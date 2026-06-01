@@ -1,6 +1,6 @@
 <?php
 /**
- * config.php — Централизованная конфигурация платформы
+ * config.php - Централизованная конфигурация платформы
  *
  * ВАЖНО: Этот файл должен быть исключён из системы контроля версий (.gitignore).
  * В production-среде рекомендуется читать значения из переменных окружения ($_ENV).
@@ -29,11 +29,11 @@ return [
         // Время жизни сессионного cookie (секунды): 0 = до закрытия браузера
         'lifetime'  => 0,
         // Передавать cookie только по HTTPS (для localhost: SESSION_SECURE=false)
-        // На http://localhost cookie с Secure не сохранится — для XAMPP по умолчанию false.
+        // На http://localhost cookie с Secure не сохранится - для XAMPP по умолчанию false.
         'secure'    => filter_var(getenv('SESSION_SECURE') ?: 'false', FILTER_VALIDATE_BOOLEAN),
         // Запретить доступ к cookie из JavaScript (защита от XSS-кражи сессии)
         'httponly'  => true,
-        // Строгая политика SameSite — защита от CSRF
+        // Строгая политика SameSite - защита от CSRF
         'samesite'  => 'Strict',
     ],
 
@@ -53,7 +53,7 @@ return [
     // Настройки безопасности
     // ------------------------------------------------------------------
     'security' => [
-        // bcrypt cost factor — минимально допустимое значение по требованиям ИБ
+        // bcrypt cost factor - минимально допустимое значение по требованиям ИБ
         'bcrypt_cost'        => 12,
         // Максимальное число неудачных попыток входа до временной блокировки
         'login_attempts_max' => 5,

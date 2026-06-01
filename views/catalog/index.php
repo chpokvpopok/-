@@ -10,7 +10,7 @@ declare(strict_types=1);
         </nav>
 
         <h1 class="page-title">Каталог</h1>
-        <p class="section__text">Выберите комнату — от спальни и гостиной до кухни и домашнего офиса.</p>
+        <p class="section__text">Выберите комнату - от спальни и гостиной до кухни и домашнего офиса.</p>
 
         <?php if (empty($categories)): ?>
             <p class="section__text">Категории пока не добавлены.</p>

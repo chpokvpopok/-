@@ -1,6 +1,6 @@
 <?php
 /**
- * index.php — Единая точка входа (Front Controller)
+ * index.php - Единая точка входа (Front Controller)
  *
  * ВСЕ запросы к сайту проходят через этот файл.
  * .htaccess перенаправляет сюда любой URL, который не является
@@ -61,7 +61,7 @@ $config = require __DIR__ . '/config/config.php';
 // Устанавливаем ДО любого вывода.
 // ------------------------------------------------------------------
 
-// Запрет встраивания в iframe — защита от Clickjacking
+// Запрет встраивания в iframe - защита от Clickjacking
 header('X-Frame-Options: DENY');
 
 // Запрет MIME-сниффинга браузером
@@ -120,7 +120,7 @@ $_SESSION['locale'] = $locale;
 $requestUri    = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
 $requestMethod = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
 
-// Сайт в подпапке (например /shop/ в htdocs) — убираем префикс из URI
+// Сайт в подпапке (например /shop/ в htdocs) - убираем префикс из URI
 $scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? ''));
 if ($scriptDir !== '/' && $scriptDir !== '' && str_starts_with($requestUri, $scriptDir)) {
     $requestUri = substr($requestUri, strlen($scriptDir)) ?: '/';
@@ -136,7 +136,7 @@ if ($requestUri !== '/') {
 // Разбиваем URI на сегменты: "/product/42" → ['product', '42']
 $segments = array_values(array_filter(explode('/', $requestUri)));
 
-// Первый сегмент — «раздел», второй — параметр
+// Первый сегмент - «раздел», второй - параметр
 $section = $segments[0] ?? '';
 $param   = $segments[1] ?? '';
 $subParam = $segments[2] ?? '';
@@ -155,7 +155,7 @@ try {
         render('home', [
             'products' => $products,
             'categories' => $categories,
-            'pageTitle' => 'Quattro — домашняя мебель',
+            'pageTitle' => 'Quattro - домашняя мебель',
             'pageDescription' => 'Quattro: стильная домашняя мебель для спальни, гостиной, кухни и домашнего офиса с онлайн-конфигуратором.',
             'bodyClass' => 'page-home',
         ]);
@@ -184,7 +184,7 @@ try {
 
         if ($category === null) {
             http_response_code(404);
-            render('errors/404', ['pageTitle' => '404 — Страница не найдена']);
+            render('errors/404', ['pageTitle' => '404 - Страница не найдена']);
             exit;
         }
 
@@ -192,14 +192,14 @@ try {
         render('catalog/category', [
             'category' => $category,
             'products' => $products,
-            'pageTitle' => $category['name'] . ' — каталог',
+            'pageTitle' => $category['name'] . ' - каталог',
             'pageDescription' => 'Каталог товаров категории ' . $category['name'],
             'bodyClass' => 'page-catalog',
         ]);
         exit;
     }
 
-    // ---- GET /product/{id|slug} — карточка товара ----------------
+    // ---- GET /product/{id|slug} - карточка товара ----------------
     if ($section === 'product' && $requestMethod === 'GET') {
         $controller = new App\Controllers\ProductController();
         $product    = ctype_digit((string)$param)
@@ -208,7 +208,7 @@ try {
 
         if ($product === null) {
             http_response_code(404);
-            render('errors/404', ['pageTitle' => '404 — Страница не найдена']);
+            render('errors/404', ['pageTitle' => '404 - Страница не найдена']);
             exit;
         }
 
@@ -217,7 +217,7 @@ try {
         render('product/card', [
             'product' => $product,
             'configurableProducts' => filter_configurable_products($allProducts),
-            'pageTitle' => $product['name'] . ' — Quattro',
+            'pageTitle' => $product['name'] . ' - Quattro',
             'pageDescription' => $description,
             'bodyClass' => 'page-product',
             'extraCss' => ['/public/css/configurator.css'],
@@ -226,7 +226,7 @@ try {
         exit;
     }
 
-    // ---- GET /api/product/{id} — JSON для AJAX -------------------
+    // ---- GET /api/product/{id} - JSON для AJAX -------------------
     if ($section === 'api' && $param === 'product' && $requestMethod === 'GET') {
         $productId  = (int)$subParam;
         $controller = new App\Controllers\ProductController();
@@ -234,7 +234,7 @@ try {
         exit;
     }
 
-    // ---- GET /api/csrf-token — выдача CSRF-токена ----------------
+    // ---- GET /api/csrf-token - выдача CSRF-токена ----------------
     if ($section === 'api' && $param === 'csrf-token' && $requestMethod === 'GET') {
         header('Content-Type: application/json; charset=utf-8');
         $controller = new App\Controllers\OrderController();
@@ -243,7 +243,7 @@ try {
         exit;
     }
 
-    // ---- POST /api/order/create — создание заказа ----------------
+    // ---- POST /api/order/create - создание заказа ----------------
     if ($section === 'api' && $param === 'order' && $subParam === 'create'
         && $requestMethod === 'POST') {
         $controller = new App\Controllers\OrderController();
@@ -251,7 +251,7 @@ try {
         exit;
     }
 
-    // ---- POST /api/lead/create — заявка на КП --------------------
+    // ---- POST /api/lead/create - заявка на КП --------------------
     if ($section === 'api' && $param === 'lead' && $subParam === 'create'
         && $requestMethod === 'POST') {
         $controller = new App\Controllers\LeadController();
@@ -259,7 +259,7 @@ try {
         exit;
     }
 
-    // ---- GET /order/success/{orderId} — страница «Заказ принят» --
+    // ---- GET /order/success/{orderId} - страница «Заказ принят» --
     if ($section === 'order' && $param === 'success' && $requestMethod === 'GET') {
         $orderId    = (int)$subParam;
         $controller = new App\Controllers\OrderController();
@@ -267,33 +267,33 @@ try {
         exit;
     }
 
-    // ---- GET /privacy — политика конфиденциальности ------------
+    // ---- GET /privacy - политика конфиденциальности ------------
     if ($section === 'privacy' && $requestMethod === 'GET') {
         render('pages/privacy', [
-            'pageTitle' => 'Политика конфиденциальности — Quattro',
+            'pageTitle' => 'Политика конфиденциальности - Quattro',
             'pageDescription' => 'Как Quattro обрабатывает персональные данные в формах заявки и заказа.',
             'bodyClass' => 'page-privacy',
         ]);
         exit;
     }
 
-    // ---- GET /cart — корзина ------------------------------------
+    // ---- GET /cart - корзина ------------------------------------
     if ($section === 'cart' && $requestMethod === 'GET') {
         render('cart', [
-            'pageTitle' => 'Корзина — Quattro',
+            'pageTitle' => 'Корзина - Quattro',
             'pageDescription' => 'Оформление заказа через конфигуратор Quattro.',
             'bodyClass' => 'page-cart',
         ]);
         exit;
     }
 
-    // ---- 404 — ничего не совпало --------------------------------
+    // ---- 404 - ничего не совпало --------------------------------
     http_response_code(404);
-    render('errors/404', ['pageTitle' => '404 — Страница не найдена']);
+    render('errors/404', ['pageTitle' => '404 - Страница не найдена']);
 
 } catch (Throwable $e) {
     // Глобальный обработчик непойманных исключений
-    // В debug-режиме показываем детали, в production — только общее сообщение
+    // В debug-режиме показываем детали, в production - только общее сообщение
     if ($config['app']['debug']) {
         http_response_code(500);
         echo '<pre style="background:#1a1d27;color:#ef4444;padding:20px;font-family:monospace;">';
@@ -305,6 +305,6 @@ try {
         // Логируем в файл (не показываем детали пользователю)
         error_log('[' . date('Y-m-d H:i:s') . '] ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
         http_response_code(500);
-        render('errors/500', ['pageTitle' => '500 — Ошибка сервера']);
+        render('errors/500', ['pageTitle' => '500 - Ошибка сервера']);
     }
 }

@@ -1,7 +1,7 @@
 ================================================================
 ЛИСТИНГ ПРОГРАММНОГО КОДА СЕРВЕРНОЙ ЧАСТИ
 И СКРИПТОВ СОЗДАНИЯ СХЕМЫ БАЗЫ ДАННЫХ
-ИС «Quattro — платформа домашней мебели»
+ИС «Quattro - платформа домашней мебели»
 Дата: 2026-06-02
 ================================================================
 
@@ -15,7 +15,7 @@
 
      1	<?php
      2	/**
-     3	 * index.php — Единая точка входа (Front Controller)
+     3	 * index.php - Единая точка входа (Front Controller)
      4	 *
      5	 * ВСЕ запросы к сайту проходят через этот файл.
      6	 * .htaccess перенаправляет сюда любой URL, который не является
@@ -76,7 +76,7 @@
     61	// Устанавливаем ДО любого вывода.
     62	// ------------------------------------------------------------------
     63	
-    64	// Запрет встраивания в iframe — защита от Clickjacking
+    64	// Запрет встраивания в iframe - защита от Clickjacking
     65	header('X-Frame-Options: DENY');
     66	
     67	// Запрет MIME-сниффинга браузером
@@ -135,7 +135,7 @@
    120	$requestUri    = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
    121	$requestMethod = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
    122	
-   123	// Сайт в подпапке (например /shop/ в htdocs) — убираем префикс из URI
+   123	// Сайт в подпапке (например /shop/ в htdocs) - убираем префикс из URI
    124	$scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? ''));
    125	if ($scriptDir !== '/' && $scriptDir !== '' && str_starts_with($requestUri, $scriptDir)) {
    126	    $requestUri = substr($requestUri, strlen($scriptDir)) ?: '/';
@@ -151,7 +151,7 @@
    136	// Разбиваем URI на сегменты: "/product/42" → ['product', '42']
    137	$segments = array_values(array_filter(explode('/', $requestUri)));
    138	
-   139	// Первый сегмент — «раздел», второй — параметр
+   139	// Первый сегмент - «раздел», второй - параметр
    140	$section = $segments[0] ?? '';
    141	$param   = $segments[1] ?? '';
    142	$subParam = $segments[2] ?? '';
@@ -170,7 +170,7 @@
    155	        render('home', [
    156	            'products' => $products,
    157	            'categories' => $categories,
-   158	            'pageTitle' => 'Quattro — домашняя мебель',
+   158	            'pageTitle' => 'Quattro - домашняя мебель',
    159	            'pageDescription' => 'Quattro: стильная домашняя мебель для спальни, гостиной, кухни и домашнего офиса с онлайн-конфигуратором.',
    160	            'bodyClass' => 'page-home',
    161	        ]);
@@ -199,7 +199,7 @@
    184	
    185	        if ($category === null) {
    186	            http_response_code(404);
-   187	            render('errors/404', ['pageTitle' => '404 — Страница не найдена']);
+   187	            render('errors/404', ['pageTitle' => '404 - Страница не найдена']);
    188	            exit;
    189	        }
    190	
@@ -207,14 +207,14 @@
    192	        render('catalog/category', [
    193	            'category' => $category,
    194	            'products' => $products,
-   195	            'pageTitle' => $category['name'] . ' — каталог',
+   195	            'pageTitle' => $category['name'] . ' - каталог',
    196	            'pageDescription' => 'Каталог товаров категории ' . $category['name'],
    197	            'bodyClass' => 'page-catalog',
    198	        ]);
    199	        exit;
    200	    }
    201	
-   202	    // ---- GET /product/{id|slug} — карточка товара ----------------
+   202	    // ---- GET /product/{id|slug} - карточка товара ----------------
    203	    if ($section === 'product' && $requestMethod === 'GET') {
    204	        $controller = new App\Controllers\ProductController();
    205	        $product    = ctype_digit((string)$param)
@@ -223,7 +223,7 @@
    208	
    209	        if ($product === null) {
    210	            http_response_code(404);
-   211	            render('errors/404', ['pageTitle' => '404 — Страница не найдена']);
+   211	            render('errors/404', ['pageTitle' => '404 - Страница не найдена']);
    212	            exit;
    213	        }
    214	
@@ -232,7 +232,7 @@
    217	        render('product/card', [
    218	            'product' => $product,
    219	            'configurableProducts' => filter_configurable_products($allProducts),
-   220	            'pageTitle' => $product['name'] . ' — Quattro',
+   220	            'pageTitle' => $product['name'] . ' - Quattro',
    221	            'pageDescription' => $description,
    222	            'bodyClass' => 'page-product',
    223	            'extraCss' => ['/public/css/configurator.css'],
@@ -241,7 +241,7 @@
    226	        exit;
    227	    }
    228	
-   229	    // ---- GET /api/product/{id} — JSON для AJAX -------------------
+   229	    // ---- GET /api/product/{id} - JSON для AJAX -------------------
    230	    if ($section === 'api' && $param === 'product' && $requestMethod === 'GET') {
    231	        $productId  = (int)$subParam;
    232	        $controller = new App\Controllers\ProductController();
@@ -249,7 +249,7 @@
    234	        exit;
    235	    }
    236	
-   237	    // ---- GET /api/csrf-token — выдача CSRF-токена ----------------
+   237	    // ---- GET /api/csrf-token - выдача CSRF-токена ----------------
    238	    if ($section === 'api' && $param === 'csrf-token' && $requestMethod === 'GET') {
    239	        header('Content-Type: application/json; charset=utf-8');
    240	        $controller = new App\Controllers\OrderController();
@@ -258,7 +258,7 @@
    243	        exit;
    244	    }
    245	
-   246	    // ---- POST /api/order/create — создание заказа ----------------
+   246	    // ---- POST /api/order/create - создание заказа ----------------
    247	    if ($section === 'api' && $param === 'order' && $subParam === 'create'
    248	        && $requestMethod === 'POST') {
    249	        $controller = new App\Controllers\OrderController();
@@ -266,7 +266,7 @@
    251	        exit;
    252	    }
    253	
-   254	    // ---- POST /api/lead/create — заявка на КП --------------------
+   254	    // ---- POST /api/lead/create - заявка на КП --------------------
    255	    if ($section === 'api' && $param === 'lead' && $subParam === 'create'
    256	        && $requestMethod === 'POST') {
    257	        $controller = new App\Controllers\LeadController();
@@ -274,7 +274,7 @@
    259	        exit;
    260	    }
    261	
-   262	    // ---- GET /order/success/{orderId} — страница «Заказ принят» --
+   262	    // ---- GET /order/success/{orderId} - страница «Заказ принят» --
    263	    if ($section === 'order' && $param === 'success' && $requestMethod === 'GET') {
    264	        $orderId    = (int)$subParam;
    265	        $controller = new App\Controllers\OrderController();
@@ -282,33 +282,33 @@
    267	        exit;
    268	    }
    269	
-   270	    // ---- GET /privacy — политика конфиденциальности ------------
+   270	    // ---- GET /privacy - политика конфиденциальности ------------
    271	    if ($section === 'privacy' && $requestMethod === 'GET') {
    272	        render('pages/privacy', [
-   273	            'pageTitle' => 'Политика конфиденциальности — Quattro',
+   273	            'pageTitle' => 'Политика конфиденциальности - Quattro',
    274	            'pageDescription' => 'Как Quattro обрабатывает персональные данные в формах заявки и заказа.',
    275	            'bodyClass' => 'page-privacy',
    276	        ]);
    277	        exit;
    278	    }
    279	
-   280	    // ---- GET /cart — корзина ------------------------------------
+   280	    // ---- GET /cart - корзина ------------------------------------
    281	    if ($section === 'cart' && $requestMethod === 'GET') {
    282	        render('cart', [
-   283	            'pageTitle' => 'Корзина — Quattro',
+   283	            'pageTitle' => 'Корзина - Quattro',
    284	            'pageDescription' => 'Оформление заказа через конфигуратор Quattro.',
    285	            'bodyClass' => 'page-cart',
    286	        ]);
    287	        exit;
    288	    }
    289	
-   290	    // ---- 404 — ничего не совпало --------------------------------
+   290	    // ---- 404 - ничего не совпало --------------------------------
    291	    http_response_code(404);
-   292	    render('errors/404', ['pageTitle' => '404 — Страница не найдена']);
+   292	    render('errors/404', ['pageTitle' => '404 - Страница не найдена']);
    293	
    294	} catch (Throwable $e) {
    295	    // Глобальный обработчик непойманных исключений
-   296	    // В debug-режиме показываем детали, в production — только общее сообщение
+   296	    // В debug-режиме показываем детали, в production - только общее сообщение
    297	    if ($config['app']['debug']) {
    298	        http_response_code(500);
    299	        echo '<pre style="background:#1a1d27;color:#ef4444;padding:20px;font-family:monospace;">';
@@ -320,7 +320,7 @@
    305	        // Логируем в файл (не показываем детали пользователю)
    306	        error_log('[' . date('Y-m-d H:i:s') . '] ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
    307	        http_response_code(500);
-   308	        render('errors/500', ['pageTitle' => '500 — Ошибка сервера']);
+   308	        render('errors/500', ['pageTitle' => '500 - Ошибка сервера']);
    309	    }
    310	}
 
@@ -331,7 +331,7 @@
 
      1	<?php
      2	/**
-     3	 * router.php — точка входа для встроенного сервера PHP (php -S).
+     3	 * router.php - точка входа для встроенного сервера PHP (php -S).
      4	 * Эмулирует mod_rewrite: статика отдаётся как есть, остальное → index.php.
      5	 */
      6	declare(strict_types=1);
@@ -350,7 +350,7 @@
 ################################################################
 
      1	# =============================================================
-     2	# .htaccess — Конфигурация Apache для веб-платформы
+     2	# .htaccess - Конфигурация Apache для веб-платформы
      3	# Расположение: корень проекта (рядом с index.php)
      4	# =============================================================
      5	
@@ -364,7 +364,7 @@
     13	<IfModule mod_rewrite.c>
     14	    RewriteEngine On
     15	
-    16	    # Базовый путь — если сайт в подпапке (например /furniture_platform/),
+    16	    # Базовый путь - если сайт в подпапке (например /furniture_platform/),
     17	    # раскомментируй и укажи путь:
     18	    # RewriteBase /furniture_platform/
     19	
@@ -425,7 +425,7 @@
     74	
     75	# ------------------------------------------------------------------
     76	# ЗАГОЛОВКИ БЕЗОПАСНОСТИ HTTP
-    77	# (дублируют то, что устанавливается в PHP — как резервный уровень)
+    77	# (дублируют то, что устанавливается в PHP - как резервный уровень)
     78	# ------------------------------------------------------------------
     79	<IfModule mod_headers.c>
     80	    Header always set X-Frame-Options "DENY"
@@ -464,23 +464,23 @@
    113	<IfModule mod_expires.c>
    114	    ExpiresActive On
    115	
-   116	    # Изображения — 1 месяц
+   116	    # Изображения - 1 месяц
    117	    ExpiresByType image/webp   "access plus 1 month"
    118	    ExpiresByType image/jpeg   "access plus 1 month"
    119	    ExpiresByType image/png    "access plus 1 month"
    120	    ExpiresByType image/svg+xml "access plus 1 month"
    121	    ExpiresByType image/x-icon "access plus 1 year"
    122	
-   123	    # CSS и JS — 1 неделя
+   123	    # CSS и JS - 1 неделя
    124	    # (при обновлении файлов добавляй версию: style.css?v=2)
    125	    ExpiresByType text/css                "access plus 1 week"
    126	    ExpiresByType application/javascript  "access plus 1 week"
    127	
-   128	    # Шрифты — 1 год (не меняются)
+   128	    # Шрифты - 1 год (не меняются)
    129	    ExpiresByType font/woff2 "access plus 1 year"
    130	    ExpiresByType font/woff  "access plus 1 year"
    131	
-   132	    # HTML — не кешируем (всегда свежий)
+   132	    # HTML - не кешируем (всегда свежий)
    133	    ExpiresByType text/html "access plus 0 seconds"
    134	</IfModule>
    135	
@@ -506,7 +506,7 @@
 
      1	<?php
      2	/**
-     3	 * config.php — Централизованная конфигурация платформы
+     3	 * config.php - Централизованная конфигурация платформы
      4	 *
      5	 * ВАЖНО: Этот файл должен быть исключён из системы контроля версий (.gitignore).
      6	 * В production-среде рекомендуется читать значения из переменных окружения ($_ENV).
@@ -535,11 +535,11 @@
     29	        // Время жизни сессионного cookie (секунды): 0 = до закрытия браузера
     30	        'lifetime'  => 0,
     31	        // Передавать cookie только по HTTPS (для localhost: SESSION_SECURE=false)
-    32	        // На http://localhost cookie с Secure не сохранится — для XAMPP по умолчанию false.
+    32	        // На http://localhost cookie с Secure не сохранится - для XAMPP по умолчанию false.
     33	        'secure'    => filter_var(getenv('SESSION_SECURE') ?: 'false', FILTER_VALIDATE_BOOLEAN),
     34	        // Запретить доступ к cookie из JavaScript (защита от XSS-кражи сессии)
     35	        'httponly'  => true,
-    36	        // Строгая политика SameSite — защита от CSRF
+    36	        // Строгая политика SameSite - защита от CSRF
     37	        'samesite'  => 'Strict',
     38	    ],
     39	
@@ -559,7 +559,7 @@
     53	    // Настройки безопасности
     54	    // ------------------------------------------------------------------
     55	    'security' => [
-    56	        // bcrypt cost factor — минимально допустимое значение по требованиям ИБ
+    56	        // bcrypt cost factor - минимально допустимое значение по требованиям ИБ
     57	        'bcrypt_cost'        => 12,
     58	        // Максимальное число неудачных попыток входа до временной блокировки
     59	        'login_attempts_max' => 5,
@@ -575,14 +575,14 @@
 
      1	<?php
      2	/**
-     3	 * Database.php — Singleton-обёртка над PDO
+     3	 * Database.php - Singleton-обёртка над PDO
      4	 *
      5	 * Принципы безопасности:
      6	 *  - Учётные данные хранятся в конфиге, а не в коде
-     7	 *  - PDO::ERRMODE_EXCEPTION — все ошибки превращаются в исключения
-     8	 *  - PDO::ATTR_EMULATE_PREPARES = false — нативные prepared statements
+     7	 *  - PDO::ERRMODE_EXCEPTION - все ошибки превращаются в исключения
+     8	 *  - PDO::ATTR_EMULATE_PREPARES = false - нативные prepared statements
      9	 *    (исключает возможность SQL-инъекции через эмуляцию на уровне PDO)
-    10	 *  - PDO::ATTR_DEFAULT_FETCH_MODE = FETCH_ASSOC — удобный формат по умолчанию
+    10	 *  - PDO::ATTR_DEFAULT_FETCH_MODE = FETCH_ASSOC - удобный формат по умолчанию
     11	 */
     12	
     13	declare(strict_types=1);
@@ -598,14 +598,14 @@
     23	    private static ?PDO $instance = null;
     24	
     25	    /**
-    26	     * Запрещаем прямое создание экземпляров — только через getInstance().
+    26	     * Запрещаем прямое создание экземпляров - только через getInstance().
     27	     */
     28	    private function __construct() {}
     29	    private function __clone() {}
     30	
     31	    /**
     32	     * Возвращает единственный экземпляр PDO-соединения (паттерн Singleton).
-    33	     * При первом вызове создаёт соединение, при последующих — возвращает кешированное.
+    33	     * При первом вызове создаёт соединение, при последующих - возвращает кешированное.
     34	     *
     35	     * @throws RuntimeException если соединение не удалось установить
     36	     */
@@ -625,7 +625,7 @@
     50	            $options = [
     51	                PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
     52	                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-    53	                // ОБЯЗАТЕЛЬНО false — иначе PDO эмулирует prepared statements
+    53	                // ОБЯЗАТЕЛЬНО false - иначе PDO эмулирует prepared statements
     54	                // через конкатенацию строк, сводя защиту от SQLi к нулю
     55	                PDO::ATTR_EMULATE_PREPARES   => false,
     56	                // Устанавливаем кодировку на уровне соединения
@@ -637,7 +637,7 @@
     62	            try {
     63	                self::$instance = new PDO($dsn, $db['user'], $db['password'], $options);
     64	            } catch (PDOException $e) {
-    65	                // Намеренно НЕ включаем оригинальное сообщение в публичный ответ —
+    65	                // Намеренно НЕ включаем оригинальное сообщение в публичный ответ -
     66	                // оно может содержать учётные данные или детали схемы.
     67	                throw new RuntimeException(
     68	                    'Ошибка подключения к базе данных. Обратитесь к администратору.',
@@ -680,7 +680,7 @@
     22	    extract($data, EXTR_SKIP);
     23	
     24	    $pageTitle       = $layout['pageTitle'] ?? $data['pageTitle'] ?? 'Quattro';
-    25	    $pageDescription = $layout['pageDescription'] ?? $data['pageDescription'] ?? 'Quattro — стильная домашняя мебель с онлайн-конфигуратором.';
+    25	    $pageDescription = $layout['pageDescription'] ?? $data['pageDescription'] ?? 'Quattro - стильная домашняя мебель с онлайн-конфигуратором.';
     26	    $bodyClass       = $layout['bodyClass'] ?? $data['bodyClass'] ?? '';
     27	    $extraCss        = $layout['extraCss'] ?? $data['extraCss'] ?? [];
     28	    $extraJs         = $layout['extraJs'] ?? $data['extraJs'] ?? [];
@@ -796,7 +796,7 @@
     97	     * вместе с их конфигурационными опциями.
     98	     *
     99	     * Метод реализует «жадную загрузку» (eager loading) опций:
-   100	     * сначала загружаются товары, затем одним запросом — все их опции,
+   100	     * сначала загружаются товары, затем одним запросом - все их опции,
    101	     * после чего происходит сборка результата в PHP.
    102	     * Это позволяет избежать проблемы N+1 запросов.
    103	     *
@@ -806,7 +806,7 @@
    107	     */
    108	    public function getProductsByCategory(int $categoryId = 0, string $locale = 'ru'): array
    109	    {
-   110	        // Валидация локали — только допустимые значения
+   110	        // Валидация локали - только допустимые значения
    111	        $locale = in_array($locale, ['ru', 'kk'], true) ? $locale : 'ru';
    112	
    113	        // Динамически подставляем суффикс языка в имена столбцов.
@@ -1127,7 +1127,7 @@
     79	     */
     80	    public function generateCsrfToken(): string
     81	    {
-    82	        // random_bytes() — CSPRNG, безопаснее mt_rand() / uniqid()
+    82	        // random_bytes() - CSPRNG, безопаснее mt_rand() / uniqid()
     83	        $token = bin2hex(random_bytes(32));
     84	        $_SESSION['csrf_token'] = $token;
     85	        return $token;
@@ -1257,7 +1257,7 @@
    209	
    210	        if ($order === null) {
    211	            http_response_code(404);
-   212	            render('errors/404', ['pageTitle' => '404 — Страница не найдена']);
+   212	            render('errors/404', ['pageTitle' => '404 - Страница не найдена']);
    213	            return;
    214	        }
    215	
@@ -1305,7 +1305,7 @@
    257	                );
    258	            }
    259	
-   260	            // product_id — целое положительное число
+   260	            // product_id - целое положительное число
    261	            $productId = filter_var($item['product_id'] ?? 0,
    262	                                    FILTER_VALIDATE_INT,
    263	                                    ['options' => ['min_range' => 1]]);
@@ -1315,7 +1315,7 @@
    267	                );
    268	            }
    269	
-   270	            // quantity — целое от 1 до MAX_QTY
+   270	            // quantity - целое от 1 до MAX_QTY
    271	            $quantity = filter_var($item['quantity'] ?? 1,
    272	                                   FILTER_VALIDATE_INT,
    273	                                   ['options' => ['min_range' => 1, 'max_range' => self::MAX_QTY]]);
@@ -1325,7 +1325,7 @@
    277	                );
    278	            }
    279	
-   280	            // selected_options — массив целых чисел (может быть пустым)
+   280	            // selected_options - массив целых чисел (может быть пустым)
    281	            $rawOptions = $item['selected_options'] ?? [];
    282	            if (!is_array($rawOptions)) {
    283	                throw new InvalidArgumentException(
@@ -1377,7 +1377,7 @@
    329	
    330	        // Обязательные поля
    331	        if (mb_strlen($name) < 2 || mb_strlen($name) > 150) {
-   332	            throw new InvalidArgumentException('Укажите корректное имя (2–150 символов).');
+   332	            throw new InvalidArgumentException('Укажите корректное имя (2-150 символов).');
    333	        }
    334	
    335	        // Валидация телефона: допускаем форматы +7XXXXXXXXXX или 8XXXXXXXXXX
@@ -1433,7 +1433,7 @@
    385	                $optionIds = $item['selected_options'];
    386	
    387	                // --- Получаем базовую цену товара из БД ---
-   388	                // Это критически важно: нельзя доверять цене, переданной клиентом —
+   388	                // Это критически важно: нельзя доверять цене, переданной клиентом -
    389	                // клиентская часть хранит отображаемые цены, реальные берём из БД.
    390	                $productStmt = $this->db->prepare(
    391	                    'SELECT id, base_price FROM products WHERE id = :id AND active = 1 LIMIT 1'
@@ -1531,13 +1531,13 @@
    483	                ]);
    484	            }
    485	
-   486	            // Всё прошло успешно — фиксируем транзакцию
+   486	            // Всё прошло успешно - фиксируем транзакцию
    487	            $this->db->commit();
    488	
    489	            return $orderId;
    490	
    491	        } catch (\Throwable $e) {
-   492	            // При любой ошибке откатываем транзакцию — частичных заказов не будет
+   492	            // При любой ошибке откатываем транзакцию - частичных заказов не будет
    493	            $this->db->rollBack();
    494	            throw $e;
    495	        }
@@ -1564,7 +1564,7 @@
    516	
    517	    /**
    518	     * Очищает строку от пробелов и экранирует HTML-спецсимволы.
-   519	     * htmlspecialchars с ENT_QUOTES экранирует как " так и ' —
+   519	     * htmlspecialchars с ENT_QUOTES экранирует как " так и ' -
    520	     * защита от XSS при последующем выводе в HTML-контексте.
    521	     *
    522	     * @param mixed  $value   Входное значение
@@ -1595,7 +1595,7 @@
      3	 * LeadController.php
      4	 *
      5	 * Приём заявок на коммерческое предложение (лиды).
-     6	 * CSRF и санитизация — по паттерну OrderController.
+     6	 * CSRF и санитизация - по паттерну OrderController.
      7	 */
      8	
      9	declare(strict_types=1);
@@ -1720,7 +1720,7 @@
    128	    {
    129	        $name = $this->sanitizeString($data['name'] ?? '', 150);
    130	        if (mb_strlen($name) < 2 || mb_strlen($name) > 150) {
-   131	            throw new InvalidArgumentException('Укажите корректное имя (2–150 символов).');
+   131	            throw new InvalidArgumentException('Укажите корректное имя (2-150 символов).');
    132	        }
    133	
    134	        $email = trim((string)($data['email'] ?? ''));
@@ -1981,7 +1981,7 @@
    182	}
    183	
    184	/**
-   185	 * Подпись варианта в конфигураторе: для select — значение (Велюр), для checkbox — название опции.
+   185	 * Подпись варианта в конфигураторе: для select - значение (Велюр), для checkbox - название опции.
    186	 */
    187	function option_choice_label(array $option): string
    188	{
@@ -2240,7 +2240,7 @@
     12	
     13	-- -------------------------------------------------------------
     14	-- Таблица пользователей системы
-    15	-- Роли: client — покупатель, manager — менеджер заказов, admin — суперадмин
+    15	-- Роли: client - покупатель, manager - менеджер заказов, admin - суперадмин
     16	-- -------------------------------------------------------------
     17	CREATE TABLE IF NOT EXISTS users (
     18	    id            INT UNSIGNED     NOT NULL AUTO_INCREMENT,
@@ -2294,7 +2294,7 @@
     66	                    COMMENT 'Базовая цена базовой конфигурации, тенге',
     67	    image_preview   VARCHAR(500)               COMMENT 'Путь к превью-изображению',
     68	    active          TINYINT(1)        NOT NULL DEFAULT 1
-    69	                    COMMENT '1 — опубликован, 0 — скрыт',
+    69	                    COMMENT '1 - опубликован, 0 - скрыт',
     70	    sku             VARCHAR(100)      NOT NULL COMMENT 'Артикул (Stock Keeping Unit)',
     71	    created_at      DATETIME          NOT NULL DEFAULT CURRENT_TIMESTAMP,
     72	
@@ -2317,7 +2317,7 @@
     89	-- Таблица конфигурационных опций товаров
     90	-- Примеры опций: Материал столешницы (select),
     91	--                LED-подсветка (checkbox), Блок розеток (checkbox)
-    92	-- price_modifier — надбавка к base_price (может быть отрицательной)
+    92	-- price_modifier - надбавка к base_price (может быть отрицательной)
     93	-- -------------------------------------------------------------
     94	CREATE TABLE IF NOT EXISTS product_options (
     95	    id              INT UNSIGNED     NOT NULL AUTO_INCREMENT,
@@ -2326,8 +2326,8 @@
     98	    option_name_kk  VARCHAR(200)     NOT NULL COMMENT 'Название опции (KK)',
     99	    option_type     ENUM('select','checkbox')
    100	                                     NOT NULL DEFAULT 'select',
-   101	    option_value_ru VARCHAR(200)              COMMENT 'Значение опции — для select (RU)',
-   102	    option_value_kk VARCHAR(200)              COMMENT 'Значение опции — для select (KK)',
+   101	    option_value_ru VARCHAR(200)              COMMENT 'Значение опции - для select (RU)',
+   102	    option_value_kk VARCHAR(200)              COMMENT 'Значение опции - для select (KK)',
    103	    option_group    VARCHAR(100)              COMMENT 'Группировка опций одного select',
    104	    price_modifier  DECIMAL(12, 2)   NOT NULL DEFAULT 0.00
    105	                    COMMENT 'Прибавка к итоговой цене, тенге',
@@ -2354,7 +2354,7 @@
    126	-- -------------------------------------------------------------
    127	CREATE TABLE IF NOT EXISTS orders (
    128	    id            INT UNSIGNED     NOT NULL AUTO_INCREMENT,
-   129	    user_id       INT UNSIGNED              COMMENT 'NULL — гостевой заказ',
+   129	    user_id       INT UNSIGNED              COMMENT 'NULL - гостевой заказ',
    130	    total_price   DECIMAL(14, 2)   NOT NULL DEFAULT 0.00
    131	                  COMMENT 'Итоговая сумма заказа, тенге',
    132	    status        ENUM('new','processing','production','ready','shipped','done')
@@ -2381,9 +2381,9 @@
    153	
    154	-- -------------------------------------------------------------
    155	-- Таблица позиций заказа (строки корзины)
-   156	-- selected_options_json — снимок выбранных опций на момент заказа:
+   156	-- selected_options_json - снимок выбранных опций на момент заказа:
    157	--   [{"option_id":3,"option_name_ru":"HPL-пластик","price_modifier":15000}, ...]
-   158	-- Снимок хранится намеренно — цена опции может измениться, но
+   158	-- Снимок хранится намеренно - цена опции может измениться, но
    159	-- зафиксированный заказ должен сохранять историческое значение.
    160	-- -------------------------------------------------------------
    161	CREATE TABLE IF NOT EXISTS order_items (
@@ -2459,7 +2459,7 @@
    231	    (product_id, option_name_ru, option_name_kk, option_type,
    232	     option_value_ru, option_value_kk, option_group, price_modifier, sort_order)
    233	VALUES
-   234	-- Группа: Материал столешницы (select — взаимоисключающий выбор)
+   234	-- Группа: Материал столешницы (select - взаимоисключающий выбор)
    235	(1, 'Материал столешницы', 'Үстел материалы', 'select',
    236	 'ЛДСП стандарт', 'ЛДСП стандарт', 'material', 0.00, 1),
    237	(1, 'Материал столешницы', 'Үстел материалы', 'select',
@@ -2473,7 +2473,7 @@
    245	(1, 'Конфигурация', 'Конфигурация', 'select',
    246	 'Радиусная', 'Радиустық', 'config', 60000.00, 5),
    247	
-   248	-- Дополнительные опции (checkbox — независимый выбор)
+   248	-- Дополнительные опции (checkbox - независимый выбор)
    249	(1, 'Блок розеток и USB', 'Розетка және USB блогы',
    250	 'checkbox', NULL, NULL, 'extras', 18000.00, 6),
    251	(1, 'Система климат-контроля', 'Климат бақылау жүйесі',

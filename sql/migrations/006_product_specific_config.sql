@@ -15,8 +15,8 @@ UPDATE products SET slug = 'kids-room-01', image_preview = '/public/images/produ
 INSERT INTO products
     (category_id, name_ru, name_kk, description_ru, description_kk, base_price, sku, active, image_preview, slug)
 SELECT c.id,
-    'Quattro Bedroom D2 — кровать с подъёмным механизмом',
-    'Quattro Bedroom D2 — көтергіш механизмі',
+    'Quattro Bedroom D2 - кровать с подъёмным механизмом',
+    'Quattro Bedroom D2 - көтергіш механизмі',
     'Отдельная кровать с выбором каркаса, типа основания и модулей хранения.',
     'Жеке төсек: каркас, негіз және сақтау модульдері.',
     320000.00, 'BEDROOM-BED-02', 1, '/public/images/products/bedroom-bed-02.jpg', 'bedroom-bed-02'
@@ -27,8 +27,8 @@ ON DUPLICATE KEY UPDATE name_ru = VALUES(name_ru), description_ru = VALUES(descr
 INSERT INTO products
     (category_id, name_ru, name_kk, description_ru, description_kk, base_price, sku, active, image_preview, slug)
 SELECT c.id,
-    'Quattro Living L2 — кресло-кроват',
-    'Quattro Living L2 — кресло-кровать',
+    'Quattro Living L2 - кресло-кроват',
+    'Quattro Living L2 - кресло-кровать',
     'Компактное кресло для гостиной: обивка, механизм раскладывания и аксессуары.',
     'Гостинаяға арналған кресло: жабын, механизм және аксессуарлар.',
     245000.00, 'LIVING-CHAIR-02', 1, '/public/images/products/living-chair-02.jpg', 'living-chair-02'

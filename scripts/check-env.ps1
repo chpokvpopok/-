@@ -44,7 +44,7 @@ if ($php) {
     if ($hasPdo) {
         Write-Host 'pdo_mysql: OK' -ForegroundColor Green
     } else {
-        Write-Host 'pdo_mysql: НЕТ — включи в php.ini' -ForegroundColor Red
+        Write-Host 'pdo_mysql: НЕТ - включи в php.ini' -ForegroundColor Red
     }
 }
 

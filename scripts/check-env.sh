@@ -29,7 +29,7 @@ if PHP_BIN="$(find_php_bin 2>/dev/null)"; then
   if "$PHP_BIN" -m 2>/dev/null | grep -q '^pdo_mysql$'; then
     echo "pdo_mysql: OK"
   else
-    echo "pdo_mysql: НЕТ — включи extension=pdo_mysql в php.ini"
+    echo "pdo_mysql: НЕТ - включи extension=pdo_mysql в php.ini"
   fi
   echo ""
   echo "Для запуска (скопируй в этот терминал):"
@@ -64,7 +64,7 @@ if MYSQL_BIN="$(find_mysql_bin 2>/dev/null)"; then
       echo "База furniture_platform: нет (нужен: mysql ... < sql/schema.sql)"
     fi
   else
-    echo "Подключение: ОШИБКА — запусти службу MySQL (services.msc)"
+    echo "Подключение: ОШИБКА - запусти службу MySQL (services.msc)"
   fi
   echo ""
   echo "Для запуска:"

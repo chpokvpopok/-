@@ -21,12 +21,12 @@
 
 ### Правила для агента
 
-1. **Одна задача = один логический PR** — не смешивать несвязанные TASK без явного запроса.
-2. **Сначала зависимости** — если TASK-N требует TASK-M, убедись что M выполнен.
-3. **Не ломать существующее** — `/product/{id}`, `/api/order/create`, CSRF должны работать после каждой задачи.
-4. **Проверка** — в конце сессии выполнить «Проверку» из задачи и `./scripts/dev.sh` при необходимости.
-5. **Минимальный diff** — только файлы из списка «Файлы» задачи + необходимые правки `index.php`.
-6. **Отметка прогресса** — заменить `- [ ]` на `- [x]` для выполненной задачи в этом файле.
+1. **Одна задача = один логический PR** - не смешивать несвязанные TASK без явного запроса.
+2. **Сначала зависимости** - если TASK-N требует TASK-M, убедись что M выполнен.
+3. **Не ломать существующее** - `/product/{id}`, `/api/order/create`, CSRF должны работать после каждой задачи.
+4. **Проверка** - в конце сессии выполнить «Проверку» из задачи и `./scripts/dev.sh` при необходимости.
+5. **Минимальный diff** - только файлы из списка «Файлы» задачи + необходимые правки `index.php`.
+6. **Отметка прогресса** - заменить `- [ ]` на `- [x]` для выполненной задачи в этом файле.
 
 ### Легенда статусов
 
@@ -70,9 +70,9 @@
 |---|---------|----------|
 | D1 | Референс | UX/структура eteo.ru, **не** копипаст Tilda |
 | D2 | Бренд в демо | ETEO-нейминг и тексты-референс |
-| D3 | Языки | RU + KK в БД; UI-переключатель — TASK-070 |
+| D3 | Языки | RU + KK в БД; UI-переключатель - TASK-070 |
 | D4 | Конфигуратор | Отдельная страница `/product/{id}` |
-| D5 | Тема сайта | Светлая `site.css`; конфигуратор — тёмный `configurator.css` |
+| D5 | Тема сайта | Светлая `site.css`; конфигуратор - тёмный `configurator.css` |
 | D6 | Slug | ЧПУ через `slug` (категории, серии, кейсы, услуги) |
 | D7 | Лиды vs заказы | Разные таблицы: `leads` и `orders` |
 
@@ -104,18 +104,18 @@ TASK-090..099  Полировка + SEO
 
 ---
 
-# ФАЗА A — База данных и seed
+# ФАЗА A - База данных и seed
 
-## TASK-001 — Каталог миграций
+## TASK-001 - Каталог миграций
 
 - [x] **Зависимости:** нет  
 - [ ] **Цель:** подготовить структуру SQL-миграций.
 
 **Файлы:**
-- `sql/migrations/001_content_tables.sql` — CREATE новых таблиц
-- `sql/migrations/002_alter_products.sql` — ALTER products
-- `sql/migrations/003_seed_content.sql` — демо-данные
-- `sql/migrate.sh` — скрипт применения миграций по порядку
+- `sql/migrations/001_content_tables.sql` - CREATE новых таблиц
+- `sql/migrations/002_alter_products.sql` - ALTER products
+- `sql/migrations/003_seed_content.sql` - демо-данные
+- `sql/migrate.sh` - скрипт применения миграций по порядку
 
 **Шаги:**
 1. Создать папку `sql/migrations/`.
@@ -140,7 +140,7 @@ mysql -u root -e "SHOW TABLES FROM furniture_platform"
 
 ---
 
-## TASK-002 — Таблица `pages`
+## TASK-002 - Таблица `pages`
 
 - [x] **Зависимости:** TASK-001  
 - [ ] **Цель:** таблица статического контента.
@@ -152,11 +152,11 @@ mysql -u root -e "SHOW TABLES FROM furniture_platform"
 2. Индексы: `slug` UNIQUE, `type`, `active`.
 
 **Критерии приёмки:**
-- [x] `DESCRIBE pages` — все поля на месте
+- [x] `DESCRIBE pages` - все поля на месте
 
 ---
 
-## TASK-003 — Таблица `product_series`
+## TASK-003 - Таблица `product_series`
 
 - [x] **Зависимости:** TASK-001  
 
@@ -171,7 +171,7 @@ mysql -u root -e "SHOW TABLES FROM furniture_platform"
 
 ---
 
-## TASK-004 — Таблица `cases`
+## TASK-004 - Таблица `cases`
 
 - [x] **Зависимости:** TASK-001  
 
@@ -182,7 +182,7 @@ mysql -u root -e "SHOW TABLES FROM furniture_platform"
 
 ---
 
-## TASK-005 — Таблица `faq_items`
+## TASK-005 - Таблица `faq_items`
 
 - [x] **Зависимости:** TASK-001  
 
@@ -193,7 +193,7 @@ mysql -u root -e "SHOW TABLES FROM furniture_platform"
 
 ---
 
-## TASK-006 — Таблица `leads`
+## TASK-006 - Таблица `leads`
 
 - [x] **Зависимости:** TASK-001  
 
@@ -207,7 +207,7 @@ mysql -u root -e "SHOW TABLES FROM furniture_platform"
 
 ---
 
-## TASK-007 — Таблица `site_settings`
+## TASK-007 - Таблица `site_settings`
 
 - [x] **Зависимости:** TASK-001  
 
@@ -221,7 +221,7 @@ mysql -u root -e "SHOW TABLES FROM furniture_platform"
 
 ---
 
-## TASK-008 — ALTER `products`
+## TASK-008 - ALTER `products`
 
 - [x] **Зависимости:** TASK-003  
 
@@ -236,7 +236,7 @@ mysql -u root -e "SHOW TABLES FROM furniture_platform"
 
 ---
 
-## TASK-009 — Seed контента
+## TASK-009 - Seed контента
 
 - [x] **Зависимости:** TASK-002..008  
 
@@ -247,7 +247,7 @@ mysql -u root -e "SHOW TABLES FROM furniture_platform"
 2. **products:** привязать id=1,2 к сериям; slug `eteo-d1`, `eteo-m3`.
 3. **pages:** 4× competence, 4× advantage, 4× service (concept, ergonomics, design, visualization).
 4. **faq_items:** 12 вопросов (тексты по референсу eteo.ru, перефразировать).
-5. **cases:** 6–8 записей (rosseti, tupolev, wylsacom, agroeko, roscosmos, crtr).
+5. **cases:** 6-8 записей (rosseti, tupolev, wylsacom, agroeko, roscosmos, crtr).
 6. **site_settings:** phone, email, address, hero_*.
 7. **categories:** убедиться что slug совпадают с маршрутами (`dispetcherskaya` и т.д.).
 
@@ -268,9 +268,9 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 
 ---
 
-# ФАЗА B — Layout и дизайн-система сайта
+# ФАЗА B - Layout и дизайн-система сайта
 
-## TASK-010 — CSS-переменные и базовый `site.css`
+## TASK-010 - CSS-переменные и базовый `site.css`
 
 - [ ] **Зависимости:** нет (параллельно с A)  
 
@@ -287,7 +287,7 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 
 ---
 
-## TASK-011 — Типографика и шрифты
+## TASK-011 - Типографика и шрифты
 
 - [ ] **Зависимости:** TASK-010  
 
@@ -295,14 +295,14 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 
 **Шаги:**
 1. Подключить Inter или Manrope (Google Fonts или локально в `public/fonts/`).
-2. Стили h1–h4, `.lead`, `.text-muted`.
+2. Стили h1-h4, `.lead`, `.text-muted`.
 
 **Критерии приёмки:**
 - [ ] Заголовки и body читаемы, контраст достаточный
 
 ---
 
-## TASK-012 — Layout `main.php`
+## TASK-012 - Layout `main.php`
 
 - [ ] **Зависимости:** TASK-010  
 
@@ -311,14 +311,14 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 **Шаги:**
 1. Параметры: `$pageTitle`, `$pageDescription`, `$bodyClass`, `$extraCss`, `$extraJs`.
 2. Структура: `<!DOCTYPE>`, head (meta, site.css), body, слот `<?= $content ?>`, site.js.
-3. Хелпер `$e()` для escape — вынести в `views/helpers.php` или включить в layout.
+3. Хелпер `$e()` для escape - вынести в `views/helpers.php` или включить в layout.
 
 **Критерии приёмки:**
 - [ ] Тестовая view рендерится через layout без ошибок PHP
 
 ---
 
-## TASK-013 — Partial `header.php`
+## TASK-013 - Partial `header.php`
 
 - [ ] **Зависимости:** TASK-012  
 
@@ -339,14 +339,14 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 
 ---
 
-## TASK-014 — Partial `footer.php`
+## TASK-014 - Partial `footer.php`
 
 - [ ] **Зависимости:** TASK-012  
 
 **Файлы:** `views/partials/footer.php`
 
 **Шаги:**
-1. 3–4 колонки ссылок (продукция, услуги, информация).
+1. 3-4 колонки ссылок (продукция, услуги, информация).
 2. Контакты: phone, email, address.
 3. Ссылка `/privacy`.
 4. Копирайт.
@@ -356,7 +356,7 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 
 ---
 
-## TASK-015 — `site.js`: burger-меню
+## TASK-015 - `site.js`: burger-меню
 
 - [ ] **Зависимости:** TASK-013  
 
@@ -372,7 +372,7 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 
 ---
 
-## TASK-016 — `site.js`: плавный скролл к якорям
+## TASK-016 - `site.js`: плавный скролл к якорям
 
 - [ ] **Зависимости:** TASK-015  
 
@@ -386,7 +386,7 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 
 ---
 
-## TASK-017 — `site.js`: FAQ-аккордеон
+## TASK-017 - `site.js`: FAQ-аккордеон
 
 - [ ] **Зависимости:** TASK-015  
 
@@ -394,7 +394,7 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 
 **Шаги:**
 1. Разметка: `.faq-item` > `button.faq-question` + `.faq-answer`.
-2. Toggle `.faq-item--open`, один открытый или несколько — **решение:** несколько (как eteo).
+2. Toggle `.faq-item--open`, один открытый или несколько - **решение:** несколько (как eteo).
 3. ARIA: `aria-expanded`, `aria-controls`.
 
 **Критерии приёмки:**
@@ -402,7 +402,7 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 
 ---
 
-## TASK-018 — Partial `lead-form.php` (разметка)
+## TASK-018 - Partial `lead-form.php` (разметка)
 
 - [ ] **Зависимости:** TASK-012, TASK-010  
 
@@ -419,7 +419,7 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 
 ---
 
-## TASK-019 — Интеграция layout в существующие страницы
+## TASK-019 - Интеграция layout в существующие страницы
 
 - [ ] **Зависимости:** TASK-012..014  
 
@@ -430,7 +430,7 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 2. Пример паттерна в комментарии в `views/layouts/main.php`.
 
 **Критерии приёмки:**
-- [ ] `/несуществующий` — 404 с header/footer
+- [ ] `/несуществующий` - 404 с header/footer
 
 **Промпт сессии:**
 ```text
@@ -439,16 +439,16 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 
 ---
 
-# ФАЗА C — Контроллеры и модели доступа к данным
+# ФАЗА C - Контроллеры и модели доступа к данным
 
-## TASK-020 — `SiteSettingsRepository` (хелпер)
+## TASK-020 - `SiteSettingsRepository` (хелпер)
 
 - [ ] **Зависимости:** TASK-007, TASK-009  
 
 **Файлы:** `controllers/SiteSettings.php` или `includes/SiteSettings.php`
 
 **Шаги:**
-1. Метод `getAll(string $locale): array` — key → value.
+1. Метод `getAll(string $locale): array` - key → value.
 2. Метод `get(string $key, string $locale, string $default = ''): string`.
 3. Кеш в static-переменной на запрос.
 
@@ -457,7 +457,7 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 
 ---
 
-## TASK-021 — `PageController`
+## TASK-021 - `PageController`
 
 - [ ] **Зависимости:** TASK-002, TASK-009  
 
@@ -465,7 +465,7 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 
 **Шаги:**
 1. `getBySlug(string $slug, string $locale): ?array`
-2. `getByType(string $type, string $locale): array` — для competence, advantage, service.
+2. `getByType(string $type, string $locale): array` - для competence, advantage, service.
 3. Только `active = 1`.
 
 **Критерии приёмки:**
@@ -473,7 +473,7 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 
 ---
 
-## TASK-022 — `CaseController`
+## TASK-022 - `CaseController`
 
 - [ ] **Зависимости:** TASK-004, TASK-009  
 
@@ -484,11 +484,11 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 2. `getBySlug(string $slug, string $locale): ?array`
 
 **Критерии приёмки:**
-- [ ] `getList('ru', 3)` — 3 кейса для главной
+- [ ] `getList('ru', 3)` - 3 кейса для главной
 
 ---
 
-## TASK-023 — `FaqController`
+## TASK-023 - `FaqController`
 
 - [ ] **Зависимости:** TASK-005, TASK-009  
 
@@ -502,7 +502,7 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 
 ---
 
-## TASK-024 — `SeriesController`
+## TASK-024 - `SeriesController`
 
 - [ ] **Зависимости:** TASK-003, TASK-008  
 
@@ -511,14 +511,14 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 **Шаги:**
 1. `getAll(string $locale): array`
 2. `getBySlug(string $slug, string $locale): ?array`
-3. `getProducts(int $seriesId, string $locale): array` — делегировать ProductController или SQL join.
+3. `getProducts(int $seriesId, string $locale): array` - делегировать ProductController или SQL join.
 
 **Критерии приёмки:**
 - [ ] `getBySlug('eteo-one', 'ru')` + список товаров серии
 
 ---
 
-## TASK-025 — Расширить `ProductController`: slug и категории
+## TASK-025 - Расширить `ProductController`: slug и категории
 
 - [ ] **Зависимости:** TASK-008  
 
@@ -534,21 +534,21 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 
 ---
 
-## TASK-026 — `CategoryController` (опционально)
+## TASK-026 - `CategoryController` (опционально)
 
 - [ ] **Зависимости:** TASK-025  
 
 **Файлы:** `controllers/CategoryController.php`
 
 **Шаги:**
-1. `getAll(string $locale): array` — для хаба `/catalog`.
+1. `getAll(string $locale): array` - для хаба `/catalog`.
 
 **Критерии приёмки:**
 - [ ] 3 категории с name и slug
 
 ---
 
-## TASK-027 — View-helper `render()`
+## TASK-027 - View-helper `render()`
 
 - [ ] **Зависимости:** TASK-012  
 
@@ -569,9 +569,9 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 
 ---
 
-# ФАЗА D — Маршрутизация
+# ФАЗА D - Маршрутизация
 
-## TASK-030 — Рефакторинг парсера URL в `index.php`
+## TASK-030 - Рефакторинг парсера URL в `index.php`
 
 - [ ] **Зависимости:** TASK-027  
 
@@ -586,7 +586,7 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 
 ---
 
-## TASK-031 — Маршрут `GET /catalog`
+## TASK-031 - Маршрут `GET /catalog`
 
 - [ ] **Зависимости:** TASK-026, TASK-030  
 
@@ -597,18 +597,18 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 2. View: карточки категорий с ссылкой `/catalog/{slug}`.
 
 **Критерии приёмки:**
-- [ ] http://localhost:8080/catalog — 200, 3 категории
+- [ ] http://localhost:8080/catalog - 200, 3 категории
 
 ---
 
-## TASK-032 — Маршрут `GET /catalog/{slug}`
+## TASK-032 - Маршрут `GET /catalog/{slug}`
 
 - [ ] **Зависимости:** TASK-025, TASK-031  
 
 **Файлы:** `index.php`, `views/catalog/category.php` (переименовать/заменить catalog.php)
 
 **Шаги:**
-1. Распознавать slug (не только int id). Fallback: если numeric — редирект 301 на slug.
+1. Распознавать slug (не только int id). Fallback: если numeric - редирект 301 на slug.
 2. Список товаров + фильтр серий (sidebar или tabs).
 
 **Критерии приёмки:**
@@ -616,18 +616,18 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 
 ---
 
-## TASK-033 — Маршрут `GET /series/{slug}`
+## TASK-033 - Маршрут `GET /series/{slug}`
 
 - [ ] **Зависимости:** TASK-024, TASK-030  
 
 **Файлы:** `index.php`, `views/series/show.php`
 
 **Критерии приёмки:**
-- [ ] `/series/eteo-one` — описание серии + товары
+- [ ] `/series/eteo-one` - описание серии + товары
 
 ---
 
-## TASK-034 — Маршрут `GET /cases` и `GET /cases/{slug}`
+## TASK-034 - Маршрут `GET /cases` и `GET /cases/{slug}`
 
 - [ ] **Зависимости:** TASK-022, TASK-030  
 
@@ -638,18 +638,18 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 
 ---
 
-## TASK-035 — Маршрут `GET /services/{slug}`
+## TASK-035 - Маршрут `GET /services/{slug}`
 
 - [ ] **Зависимости:** TASK-021, TASK-030  
 
 **Файлы:** `index.php`, `views/services/show.php`
 
 **Критерии приёмки:**
-- [ ] `/services/concept` — страница услуги из `pages`
+- [ ] `/services/concept` - страница услуги из `pages`
 
 ---
 
-## TASK-036 — Маршруты `GET /faq`, `GET /contacts`, `GET /privacy`
+## TASK-036 - Маршруты `GET /faq`, `GET /contacts`, `GET /privacy`
 
 - [ ] **Зависимости:** TASK-021, TASK-023, TASK-020  
 
@@ -660,7 +660,7 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 
 ---
 
-## TASK-037 — Обновить `GET /` для маркетинговой главной
+## TASK-037 - Обновить `GET /` для маркетинговой главной
 
 - [ ] **Зависимости:** TASK-040 (контент главной)  
 
@@ -675,7 +675,7 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 
 ---
 
-## TASK-038 — Редиректы со старых URL
+## TASK-038 - Редиректы со старых URL
 
 - [ ] **Зависимости:** TASK-032  
 
@@ -694,11 +694,11 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 
 ---
 
-# ФАЗА E — Главная страница (секции)
+# ФАЗА E - Главная страница (секции)
 
-> Каждая секция — отдельная задача для узких AI-сессий.
+> Каждая секция - отдельная задача для узких AI-сессий.
 
-## TASK-040 — Секция Hero
+## TASK-040 - Секция Hero
 
 - [ ] **Зависимости:** TASK-012, TASK-020, TASK-037  
 
@@ -714,7 +714,7 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 
 ---
 
-## TASK-041 — Секция «Компетенции»
+## TASK-041 - Секция «Компетенции»
 
 - [ ] **Зависимости:** TASK-021, TASK-040  
 
@@ -729,7 +729,7 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 
 ---
 
-## TASK-042 — Секция «Направления» (3 продукта)
+## TASK-042 - Секция «Направления» (3 продукта)
 
 - [ ] **Зависимости:** TASK-026, TASK-040  
 
@@ -744,7 +744,7 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 
 ---
 
-## TASK-043 — Секция «Преимущества»
+## TASK-043 - Секция «Преимущества»
 
 - [ ] **Зависимости:** TASK-021, TASK-040  
 
@@ -755,7 +755,7 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 
 ---
 
-## TASK-044 — Секция «Форма КП» на главной
+## TASK-044 - Секция «Форма КП» на главной
 
 - [ ] **Зависимости:** TASK-018, TASK-070 (или заглушка submit)  
 
@@ -770,21 +770,21 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 
 ---
 
-## TASK-045 — Секция «Кейсы» (превью)
+## TASK-045 - Секция «Кейсы» (превью)
 
 - [ ] **Зависимости:** TASK-022, TASK-040  
 
 **Файлы:** `views/partials/sections/cases-preview.php`
 
 **Шаги:**
-1. 2–3 кейса, ссылка «Все кейсы» → `/cases`.
+1. 2-3 кейса, ссылка «Все кейсы» → `/cases`.
 
 **Критерии приёмки:**
 - [ ] Клик по кейсу → `/cases/{slug}`
 
 ---
 
-## TASK-046 — Секция FAQ на главной
+## TASK-046 - Секция FAQ на главной
 
 - [ ] **Зависимости:** TASK-023, TASK-017, TASK-040  
 
@@ -799,7 +799,7 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 
 ---
 
-## TASK-047 — Секция «Контакты» на главной
+## TASK-047 - Секция «Контакты» на главной
 
 - [ ] **Зависимости:** TASK-020, TASK-040  
 
@@ -810,7 +810,7 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 
 ---
 
-## TASK-048 — Сборка `home.php` из секций
+## TASK-048 - Сборка `home.php` из секций
 
 - [ ] **Зависимости:** TASK-040..047  
 
@@ -830,9 +830,9 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 
 ---
 
-# ФАЗА F — Каталог и серии
+# ФАЗА F - Каталог и серии
 
-## TASK-050 — View хаба `/catalog`
+## TASK-050 - View хаба `/catalog`
 
 - [ ] **Зависимости:** TASK-031  
 
@@ -843,7 +843,7 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 
 ---
 
-## TASK-051 — View категории `/catalog/{slug}`
+## TASK-051 - View категории `/catalog/{slug}`
 
 - [ ] **Зависимости:** TASK-032  
 
@@ -858,7 +858,7 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 
 ---
 
-## TASK-052 — Фильтр по серии в каталоге
+## TASK-052 - Фильтр по серии в каталоге
 
 - [ ] **Зависимости:** TASK-051, TASK-024  
 
@@ -869,7 +869,7 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 
 ---
 
-## TASK-053 — View `/series/{slug}`
+## TASK-053 - View `/series/{slug}`
 
 - [ ] **Зависимости:** TASK-033  
 
@@ -884,7 +884,7 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 
 ---
 
-## TASK-054 — Placeholder-изображения каталога
+## TASK-054 - Placeholder-изображения каталога
 
 - [ ] **Зависимости:** TASK-051  
 
@@ -900,9 +900,9 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 
 ---
 
-# ФАЗА G — Кейсы, услуги, статика
+# ФАЗА G - Кейсы, услуги, статика
 
-## TASK-060 — View списка кейсов
+## TASK-060 - View списка кейсов
 
 - [ ] **Зависимости:** TASK-034  
 
@@ -916,7 +916,7 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 
 ---
 
-## TASK-061 — View детали кейса
+## TASK-061 - View детали кейса
 
 - [ ] **Зависимости:** TASK-034  
 
@@ -924,14 +924,14 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 
 **Шаги:**
 1. Заголовок, клиент, body, галерея (1 img достаточно для MVP).
-2. Блок «Смотрите также» — 3 ссылки на серии.
+2. Блок «Смотрите также» - 3 ссылки на серии.
 
 **Критерии приёмки:**
 - [ ] `/cases/rosseti` открывается
 
 ---
 
-## TASK-062 — View услуги `/services/{slug}`
+## TASK-062 - View услуги `/services/{slug}`
 
 - [ ] **Зависимости:** TASK-035  
 
@@ -942,7 +942,7 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 
 ---
 
-## TASK-063 — Страница `/faq`
+## TASK-063 - Страница `/faq`
 
 - [ ] **Зависимости:** TASK-036, TASK-023  
 
@@ -953,7 +953,7 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 
 ---
 
-## TASK-064 — Страница `/contacts`
+## TASK-064 - Страница `/contacts`
 
 - [ ] **Зависимости:** TASK-036, TASK-018  
 
@@ -967,7 +967,7 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 
 ---
 
-## TASK-065 — Страница `/privacy`
+## TASK-065 - Страница `/privacy`
 
 - [ ] **Зависимости:** TASK-036  
 
@@ -983,18 +983,18 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 
 ---
 
-# ФАЗА H — Лиды (форма КП + API)
+# ФАЗА H - Лиды (форма КП + API)
 
-## TASK-070 — `LeadController` + валидация
+## TASK-070 - `LeadController` + валидация
 
 - [ ] **Зависимости:** TASK-006  
 
 **Файлы:** `controllers/LeadController.php`
 
 **Шаги:**
-1. Метод `createLead(): void` — JSON ответ.
+1. Метод `createLead(): void` - JSON ответ.
 2. Поля: email (filter_var), name (trim, len), phone (regex), organization, comment, source.
-3. CSRF — переиспользовать паттерн OrderController.
+3. CSRF - переиспользовать паттерн OrderController.
 4. htmlspecialchars перед INSERT.
 
 **Критерии приёмки:**
@@ -1003,7 +1003,7 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 
 ---
 
-## TASK-071 — Маршрут `POST /api/lead/create`
+## TASK-071 - Маршрут `POST /api/lead/create`
 
 - [ ] **Зависимости:** TASK-070, TASK-030  
 
@@ -1014,7 +1014,7 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 
 ---
 
-## TASK-072 — `site.js`: отправка lead-form
+## TASK-072 - `site.js`: отправка lead-form
 
 - [ ] **Зависимости:** TASK-071, TASK-018  
 
@@ -1031,7 +1031,7 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 
 ---
 
-## TASK-073 — Lead-form на `/cases` и `/contacts`
+## TASK-073 - Lead-form на `/cases` и `/contacts`
 
 - [ ] **Зависимости:** TASK-072, TASK-060, TASK-064  
 
@@ -1045,7 +1045,7 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 
 ---
 
-## TASK-074 — Email-уведомление (опционально)
+## TASK-074 - Email-уведомление (опционально)
 
 - [ ] **Зависимости:** TASK-070  
 
@@ -1065,16 +1065,16 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 
 ---
 
-# ФАЗА I — Доработка конфигуратора
+# ФАЗА I - Доработка конфигуратора
 
-## TASK-080 — Подключить layout к product page (частично)
+## TASK-080 - Подключить layout к product page (частично)
 
 - [ ] **Зависимости:** TASK-012  
 
 **Файлы:** `views/product/card.php`
 
 **Шаги:**
-1. **Решение:** header/footer из site layout, body — тёмный configurator.
+1. **Решение:** header/footer из site layout, body - тёмный configurator.
 2. Подключить оба CSS: site.css (header/footer) + configurator.css (контент).
 
 **Критерии приёмки:**
@@ -1083,7 +1083,7 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 
 ---
 
-## TASK-081 — Галерея thumbnails в `card.php`
+## TASK-081 - Галерея thumbnails в `card.php`
 
 - [ ] **Зависимости:** TASK-080  
 
@@ -1091,14 +1091,14 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 
 **Шаги:**
 1. Разметка `.gallery__thumbnails` как в `card.html`.
-2. 2–3 placeholder изображения.
+2. 2-3 placeholder изображения.
 
 **Критерии приёмки:**
 - [ ] Переключение фото работает (JS уже в configurator.js)
 
 ---
 
-## TASK-082 — Блок «Запросить КП» на странице товара
+## TASK-082 - Блок «Запросить КП» на странице товара
 
 - [ ] **Зависимости:** TASK-018, TASK-072  
 
@@ -1112,7 +1112,7 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 
 ---
 
-## TASK-083 — Breadcrumb со slug категории
+## TASK-083 - Breadcrumb со slug категории
 
 - [ ] **Зависимости:** TASK-025, TASK-080  
 
@@ -1126,7 +1126,7 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 
 ---
 
-## TASK-084 — SEO meta на странице товара
+## TASK-084 - SEO meta на странице товара
 
 - [ ] **Зависимости:** TASK-080  
 
@@ -1142,9 +1142,9 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 
 ---
 
-# ФАЗА J — Полировка
+# ФАЗА J - Полировка
 
-## TASK-090 — Переключатель RU/KK в header
+## TASK-090 - Переключатель RU/KK в header
 
 - [ ] **Зависимости:** TASK-013  
 
@@ -1155,7 +1155,7 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 
 ---
 
-## TASK-091 — 404/500 в layout
+## TASK-091 - 404/500 в layout
 
 - [ ] **Зависимости:** TASK-019  
 
@@ -1166,7 +1166,7 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 
 ---
 
-## TASK-092 — `sitemap.xml` (генератор)
+## TASK-092 - `sitemap.xml` (генератор)
 
 - [ ] **Зависимости:** TASK-038  
 
@@ -1180,7 +1180,7 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 
 ---
 
-## TASK-093 — Open Graph теги
+## TASK-093 - Open Graph теги
 
 - [ ] **Зависимости:** TASK-012  
 
@@ -1191,18 +1191,18 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 
 ---
 
-## TASK-094 — Lazy-load изображений
+## TASK-094 - Lazy-load изображений
 
 - [ ] **Зависимости:** TASK-054  
 
 **Файлы:** views с `<img loading="lazy">` где не LCP
 
 **Критерии приёмки:**
-- [ ] Hero — eager, остальные lazy
+- [ ] Hero - eager, остальные lazy
 
 ---
 
-## TASK-095 — Регрессионный чеклист
+## TASK-095 - Регрессионный чеклист
 
 - [ ] **Зависимости:** все MVP задачи  
 
@@ -1229,7 +1229,7 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 | Пакет | Задачи | Оценка |
 |-------|--------|--------|
 | **P0-DB** | TASK-001..009 | 1 сессия |
-| **P1-Shell** | TASK-010..019 | 1–2 сессии |
+| **P1-Shell** | TASK-010..019 | 1-2 сессии |
 | **P2-Backend** | TASK-020..027 | 1 сессия |
 | **P3-Routes** | TASK-030..038 | 1 сессия |
 | **P4-Home** | TASK-040..048 | 2 сессии |
@@ -1243,18 +1243,18 @@ mysql -u root furniture_platform < sql/migrations/003_seed_content.sql
 
 # Чеклист MVP (финальный)
 
-Отметь когда все задачи пакетов P0–P8 выполнены:
+Отметь когда все задачи пакетов P0-P8 выполнены:
 
-- [ ] **P0-DB** — миграции и seed
-- [ ] **P1-Shell** — layout, site.css, site.js
-- [ ] **P2-Backend** — контроллеры
-- [ ] **P3-Routes** — все GET-маршруты
-- [ ] **P4-Home** — маркетинговая главная
-- [ ] **P5-Catalog** — каталог + серии
-- [ ] **P6-Content** — кейсы, услуги, faq, contacts
-- [ ] **P7-Leads** — API и формы КП
-- [ ] **P8-Product** — доработка конфигуратора
-- [ ] **P9-Polish** — i18n, SEO, QA
+- [ ] **P0-DB** - миграции и seed
+- [ ] **P1-Shell** - layout, site.css, site.js
+- [ ] **P2-Backend** - контроллеры
+- [ ] **P3-Routes** - все GET-маршруты
+- [ ] **P4-Home** - маркетинговая главная
+- [ ] **P5-Catalog** - каталог + серии
+- [ ] **P6-Content** - кейсы, услуги, faq, contacts
+- [ ] **P7-Leads** - API и формы КП
+- [ ] **P8-Product** - доработка конфигуратора
+- [ ] **P9-Polish** - i18n, SEO, QA
 
 ---
 

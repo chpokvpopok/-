@@ -3,7 +3,7 @@
  * LeadController.php
  *
  * Приём заявок на коммерческое предложение (лиды).
- * CSRF и санитизация — по паттерну OrderController.
+ * CSRF и санитизация - по паттерну OrderController.
  */
 
 declare(strict_types=1);
@@ -128,7 +128,7 @@ class LeadController
     {
         $name = $this->sanitizeString($data['name'] ?? '', 150);
         if (mb_strlen($name) < 2 || mb_strlen($name) > 150) {
-            throw new InvalidArgumentException('Укажите корректное имя (2–150 символов).');
+            throw new InvalidArgumentException('Укажите корректное имя (2-150 символов).');
         }
 
         $email = trim((string)($data['email'] ?? ''));

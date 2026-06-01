@@ -1,10 +1,10 @@
-# План реализации — дипломная версия (Оптимум)
+# План реализации - дипломная версия (Оптимум)
 
 > **Референс UX:** [eteo.ru](https://eteo.ru/) (упрощённо, не копия)  
 > **Гайд для исполнителя / защиты:** [GUIDE-MENYON.md](./GUIDE-MENYON.md) ← **начни отсюда, если делаешь диплом сам**  
 > **Полный план (если понадобится):** [IMPLEMENTATION-ROADMAP.md](./IMPLEMENTATION-ROADMAP.md)  
 > **Концепция:** [PLAN-ETEO-SITE.md](./PLAN-ETEO-SITE.md)  
-> **Оценка:** ~4–5 дней, **28 задач**, **5 пакетов**
+> **Оценка:** ~4-5 дней, **28 задач**, **5 пакетов**
 
 ---
 
@@ -16,13 +16,13 @@
 2. Каталог из MySQL.
 3. **Конфигуратор** с расчётом цены (уже есть).
 4. **Оформление заказа** в БД (уже есть).
-5. **Заявка на КП** — второй сценарий без усложнения CMS.
+5. **Заявка на КП** - второй сценарий без усложнения CMS.
 
 **Не цель:** клон eteo.ru, мультиязычность, админка, кейсы с отдельными URL, серии Van/Flow/Pulse.
 
 ---
 
-## Сценарий для защиты (2–3 мин)
+## Сценарий для защиты (2-3 мин)
 
 | Шаг | Действие                               | URL                   |
 | --- | -------------------------------------- | --------------------- |
@@ -34,7 +34,7 @@
 | 6   | Подтверждение                          | `/order/success/{id}` |
 | 7   | _(опционально)_ Заявка на КП с главной | `#lead-form`          |
 
-**Фраза для комиссии:** референс — маркетинг B2B; в дипломе акцент на **онлайн-конфигуратор и backend заказа**, чего нет у типичной витрины.
+**Фраза для комиссии:** референс - маркетинг B2B; в дипломе акцент на **онлайн-конфигуратор и backend заказа**, чего нет у типичной витрины.
 
 ---
 
@@ -43,12 +43,12 @@
 | Исключено                                   | Причина                                                                                                                                           |
 | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Серии `/series/{slug}`                      | Достаточно категорий + товаров                                                                                                                    |
-| Кейсы `/cases`, детальные страницы          | 2–3 карточки статикой на главной                                                                                                                  |
-| Услуги `/services/*`                        | 3–4 карточки статикой на главной                                                                                                                  |
+| Кейсы `/cases`, детальные страницы          | 2-3 карточки статикой на главной                                                                                                                  |
+| Услуги `/services/*`                        | 3-4 карточки статикой на главной                                                                                                                  |
 | 12 FAQ, страница `/faq`                     | 4 вопроса на главной                                                                                                                              |
 | `/contacts` отдельно                        | Контакты в футере                                                                                                                                 |
 | RU/KK переключатель                         | Только русский UI                                                                                                                                 |
-| Обязательно тянуть **все** CMS-таблицы в UI | Таблицы уже в БД (TASK-009), но для диплома достаточно статики в PHP; _опционально_ FAQ/hero из `site_settings` — 1 запрос, без отдельных страниц |
+| Обязательно тянуть **все** CMS-таблицы в UI | Таблицы уже в БД (TASK-009), но для диплома достаточно статики в PHP; _опционально_ FAQ/hero из `site_settings` - 1 запрос, без отдельных страниц |
 | Slug-URL, редиректы                         | `/catalog/{id}` numeric                                                                                                                           |
 | Админка, email, sitemap, OG                 | Вне scope диплома                                                                                                                                 |
 | Галерея thumbnails                          | Одно фото товара                                                                                                                                  |
@@ -61,11 +61,11 @@
 
 | Метод | URL                   | Статус                           |
 | ----- | --------------------- | -------------------------------- |
-| GET   | `/`                   | Переработать — маркетинг + якоря |
-| GET   | `/catalog`            | Новый — хаб категорий            |
-| GET   | `/catalog/{id}`       | Есть — подключить layout         |
-| GET   | `/product/{id}`       | Есть — header/footer             |
-| GET   | `/order/success/{id}` | Есть — layout                    |
+| GET   | `/`                   | Переработать - маркетинг + якоря |
+| GET   | `/catalog`            | Новый - хаб категорий            |
+| GET   | `/catalog/{id}`       | Есть - подключить layout         |
+| GET   | `/product/{id}`       | Есть - header/footer             |
+| GET   | `/order/success/{id}` | Есть - layout                    |
 | GET   | `/api/product/{id}`   | ⚡ есть                          |
 | GET   | `/api/csrf-token`     | ⚡ есть                          |
 | POST  | `/api/order/create`   | ⚡ есть                          |
@@ -87,9 +87,9 @@
 ⚡ Выполнено по [IMPLEMENTATION-ROADMAP.md](./IMPLEMENTATION-ROADMAP.md):
 
 - `sql/migrate.sh`
-- `sql/migrations/001_content_tables.sql` — в т.ч. **`leads`** (с `source`, `status` — можно не использовать в UI)
-- `sql/migrations/002_alter_products.sql` — `series_id`, `slug` у товаров
-- `sql/migrations/003_seed_content.sql` — серии, pages, FAQ×12, кейсы, site_settings
+- `sql/migrations/001_content_tables.sql` - в т.ч. **`leads`** (с `source`, `status` - можно не использовать в UI)
+- `sql/migrations/002_alter_products.sql` - `series_id`, `slug` у товаров
+- `sql/migrations/003_seed_content.sql` - серии, pages, FAQ×12, кейсы, site_settings
 
 **Пакет O1 для диплома:** считать **выполненным**; отдельный `001_leads.sql` не нужен.
 
@@ -106,8 +106,8 @@
 
 | Пакет          | Задачи                                       | Сессий |
 | -------------- | -------------------------------------------- | ------ |
-| **O1-DB**      | ~~OPT-001~~ ⚡ TASK-001..009; OPT-002 README | 0–1    |
-| **O2-Shell**   | OPT-010..016                                 | 1–2    |
+| **O1-DB**      | ~~OPT-001~~ ⚡ TASK-001..009; OPT-002 README | 0-1    |
+| **O2-Shell**   | OPT-010..016                                 | 1-2    |
 | **O3-Home**    | OPT-020..025                                 | 1      |
 | **O4-Catalog** | OPT-030..033                                 | 1      |
 | **O5-Leads**   | OPT-040..044                                 | 1      |
@@ -119,7 +119,7 @@
 | Поле                 | Значение                                                          |
 | -------------------- | ----------------------------------------------------------------- |
 | **Последняя задача** | OPT-052 (пакет O6-Polish)                                         |
-| **Следующая**        | — дипломная версия «Оптимум» завершена                            |
+| **Следующая**        | - дипломная версия «Оптимум» завершена                            |
 | **Запуск**           | `./scripts/dev.sh` или `./start-dev.ps1` → http://localhost:8080 |
 
 ### Уже готово ⚡
@@ -129,8 +129,8 @@
 - [x] Конфигуратор + `POST /api/order/create` + `POST /api/lead/create`
 - [x] `sql/schema.sql` + 2 демо-товара
 - [x] `scripts/dev.sh`
-- [x] **ROADMAP TASK-001..009** — `migrate.sh`, контентные таблицы, seed (см. выше)
-- [x] **O1-DB** — для диплома закрыт; README в корне (OPT-002)
+- [x] **ROADMAP TASK-001..009** - `migrate.sh`, контентные таблицы, seed (см. выше)
+- [x] **O1-DB** - для диплома закрыт; README в корне (OPT-002)
 
 ---
 
@@ -138,12 +138,12 @@
 
 | #   | Решение                                                        |
 | --- | -------------------------------------------------------------- |
-| O1  | Язык UI — только RU                                            |
-| O2  | Главная — секции в PHP/partials, **без** CMS-таблиц            |
-| O3  | Каталог — `/catalog` и `/catalog/{id}` (int)                   |
+| O1  | Язык UI - только RU                                            |
+| O2  | Главная - секции в PHP/partials, **без** CMS-таблиц            |
+| O3  | Каталог - `/catalog` и `/catalog/{id}` (int)                   |
 | O4  | Тема: светлый `site.css` + тёмный `configurator.css` на товаре |
-| O5  | Лиды — отдельная таблица `leads`, не путать с `orders`         |
-| O6  | CSRF на lead API — как у заказов                               |
+| O5  | Лиды - отдельная таблица `leads`, не путать с `orders`         |
+| O6  | CSRF на lead API - как у заказов                               |
 
 ---
 
@@ -165,9 +165,9 @@ OPT-050..052     полировка (404, README)
 
 ---
 
-# Пакет O1 — База данных
+# Пакет O1 - База данных
 
-## OPT-001 — Миграция `leads`
+## OPT-001 - Миграция `leads`
 
 - [x] **Зависимости:** нет
 - [x] **Покрыто:** ROADMAP TASK-001 + TASK-006 (`001_content_tables.sql`, таблица `leads`)
@@ -180,7 +180,7 @@ mysql -u root furniture_platform -e "DESCRIBE leads"
 
 ---
 
-## OPT-002 — README: запуск для комиссии
+## OPT-002 - README: запуск для комиссии
 
 - [x] **Зависимости:** нет (параллельно)
 
@@ -195,15 +195,15 @@ mysql -u root furniture_platform -e "DESCRIBE leads"
 
 **Критерии приёмки:**
 
-- [x] По README новый человек поднимает сайт за 5–10 мин
+- [x] По README новый человек поднимает сайт за 5-10 мин
 
 **Промпт:** `Реализуй пакет O1: OPT-001, OPT-002`
 
 ---
 
-# Пакет O2 — Layout и оболочка
+# Пакет O2 - Layout и оболочка
 
-## OPT-010 — `site.css` (минимальная дизайн-система)
+## OPT-010 - `site.css` (минимальная дизайн-система)
 
 - [x] **Зависимости:** нет
 
@@ -223,7 +223,7 @@ mysql -u root furniture_platform -e "DESCRIBE leads"
 
 ---
 
-## OPT-011 — `views/helpers.php`
+## OPT-011 - `views/helpers.php`
 
 - [x] **Зависимости:** нет
 
@@ -231,8 +231,8 @@ mysql -u root furniture_platform -e "DESCRIBE leads"
 
 **Шаги:**
 
-1. `function e(mixed $v): string` — htmlspecialchars.
-2. `function format_price(float $p): string` — `number_format` + ` ₸`.
+1. `function e(mixed $v): string` - htmlspecialchars.
+2. `function format_price(float $p): string` - `number_format` + ` ₸`.
 
 **Критерии приёмки:**
 
@@ -240,7 +240,7 @@ mysql -u root furniture_platform -e "DESCRIBE leads"
 
 ---
 
-## OPT-012 — `render()` + `layouts/main.php`
+## OPT-012 - `render()` + `layouts/main.php`
 
 - [x] **Зависимости:** OPT-010, OPT-011
 
@@ -248,7 +248,7 @@ mysql -u root furniture_platform -e "DESCRIBE leads"
 
 **Шаги:**
 
-1. `render(string $view, array $data = []): void` — extract, ob_start, layout.
+1. `render(string $view, array $data = []): void` - extract, ob_start, layout.
 2. Layout: `$pageTitle`, `$pageDescription`, `$content`, `site.css`, `site.js`.
 3. Подключить helpers в начале render.
 
@@ -258,7 +258,7 @@ mysql -u root furniture_platform -e "DESCRIBE leads"
 
 ---
 
-## OPT-013 — `partials/header.php`
+## OPT-013 - `partials/header.php`
 
 - [x] **Зависимости:** OPT-012
 
@@ -276,7 +276,7 @@ mysql -u root furniture_platform -e "DESCRIBE leads"
 
 ---
 
-## OPT-014 — `partials/footer.php`
+## OPT-014 - `partials/footer.php`
 
 - [x] **Зависимости:** OPT-012
 
@@ -285,7 +285,7 @@ mysql -u root furniture_platform -e "DESCRIBE leads"
 **Шаги:**
 
 1. Краткие ссылки + контакты + «© 2026 ETEO (демо)».
-2. Одна строка «Политика конфиденциальности» — якорь `#` или статический абзац внизу главной (без отдельной страницы).
+2. Одна строка «Политика конфиденциальности» - якорь `#` или статический абзац внизу главной (без отдельной страницы).
 
 **Критерии приёмки:**
 
@@ -293,7 +293,7 @@ mysql -u root furniture_platform -e "DESCRIBE leads"
 
 ---
 
-## OPT-015 — `site.js` (меню + FAQ + якоря)
+## OPT-015 - `site.js` (меню + FAQ + якоря)
 
 - [x] **Зависимости:** OPT-013
 
@@ -303,7 +303,7 @@ mysql -u root furniture_platform -e "DESCRIBE leads"
 
 1. Burger toggle (класс `.header__nav--open`).
 2. Плавный scroll `href^="#"`.
-3. FAQ: `.faq-item` toggle (несколько открытых одновременно — ок).
+3. FAQ: `.faq-item` toggle (несколько открытых одновременно - ок).
 
 **Критерии приёмки:**
 
@@ -311,7 +311,7 @@ mysql -u root furniture_platform -e "DESCRIBE leads"
 
 ---
 
-## OPT-016 — 404/500 + `cart` через layout
+## OPT-016 - 404/500 + `cart` через layout
 
 - [x] **Зависимости:** OPT-012..014
 
@@ -320,19 +320,19 @@ mysql -u root furniture_platform -e "DESCRIBE leads"
 **Шаги:**
 
 1. Перевести ошибки на `render()`.
-2. В `index.php` глобальный catch — 500 через render.
+2. В `index.php` глобальный catch - 500 через render.
 
 **Критерии приёмки:**
 
-- [ ] `/test-404` — страница с header/footer
+- [ ] `/test-404` - страница с header/footer
 
 **Промпт:** `Реализуй пакет O2: OPT-010..016`
 
 ---
 
-# Пакет O3 — Главная
+# Пакет O3 - Главная
 
-## OPT-020 — Секция Hero
+## OPT-020 - Секция Hero
 
 - [x] **Зависимости:** O2
 
@@ -341,7 +341,7 @@ mysql -u root furniture_platform -e "DESCRIBE leads"
 **Контент (статика):**
 
 - Заголовок: «Создаем технологичные пространства для продуктивной работы»
-- Подзаголовок: 1–2 предложения про диспетчерскую мебель (по смыслу eteo)
+- Подзаголовок: 1-2 предложения про диспетчерскую мебель (по смыслу eteo)
 - CTA: «Каталог» → `/catalog`, «Запросить КП» → `#lead-form`, «Конфигуратор» → `/product/1`
 
 **Критерии приёмки:**
@@ -350,7 +350,7 @@ mysql -u root furniture_platform -e "DESCRIBE leads"
 
 ---
 
-## OPT-021 — Секция «Направления» (3 карточки)
+## OPT-021 - Секция «Направления» (3 карточки)
 
 - [x] **Зависимости:** OPT-020
 
@@ -367,7 +367,7 @@ mysql -u root furniture_platform -e "DESCRIBE leads"
 
 ---
 
-## OPT-022 — Секция «Преимущества» (4 тезиса)
+## OPT-022 - Секция «Преимущества» (4 тезиса)
 
 - [x] **Зависимости:** OPT-020
 
@@ -381,7 +381,7 @@ mysql -u root furniture_platform -e "DESCRIBE leads"
 
 ---
 
-## OPT-023 — Секция «Примеры проектов» (статика)
+## OPT-023 - Секция «Примеры проектов» (статика)
 
 - [x] **Зависимости:** OPT-020
 
@@ -390,7 +390,7 @@ mysql -u root furniture_platform -e "DESCRIBE leads"
 **Шаги:**
 
 1. `id="cases"`.
-2. 2–3 карточки: Россети, Туполев — **без** отдельных URL, только текст + placeholder img.
+2. 2-3 карточки: Россети, Туполев - **без** отдельных URL, только текст + placeholder img.
 
 **Критерии приёмки:**
 
@@ -398,13 +398,13 @@ mysql -u root furniture_platform -e "DESCRIBE leads"
 
 ---
 
-## OPT-024 — Секция FAQ (4 вопроса)
+## OPT-024 - Секция FAQ (4 вопроса)
 
 - [x] **Зависимости:** OPT-015, OPT-020
 
 **Файлы:** `views/partials/sections/faq.php`
 
-**Шаги:** 4 пары вопрос/ответ (цена, производство, заказ, материалы) — из смысла eteo, коротко.
+**Шаги:** 4 пары вопрос/ответ (цена, производство, заказ, материалы) - из смысла eteo, коротко.
 
 **Критерии приёмки:**
 
@@ -412,9 +412,9 @@ mysql -u root furniture_platform -e "DESCRIBE leads"
 
 ---
 
-## OPT-025 — Сборка `home.php` + маршрут `/`
+## OPT-025 - Сборка `home.php` + маршрут `/`
 
-- [x] **Зависимости:** OPT-020..024, OPT-044 (форма — можно заглушку, потом O5)
+- [x] **Зависимости:** OPT-020..024, OPT-044 (форма - можно заглушку, потом O5)
 
 **Файлы:** `views/home.php`, `index.php`
 
@@ -422,19 +422,19 @@ mysql -u root furniture_platform -e "DESCRIBE leads"
 
 1. `render('home', ['pageTitle' => '...'])`.
 2. Include секций по порядку: hero → directions → advantages → cases-static → **lead-form** → faq.
-3. Удалить старую «только сетку товаров» или оставить мини-блок «Популярные модели» (2 карточки ETEO-D1/M3) — **рекомендуется** для связи с каталогом.
+3. Удалить старую «только сетку товаров» или оставить мини-блок «Популярные модели» (2 карточки ETEO-D1/M3) - **рекомендуется** для связи с каталогом.
 
 **Критерии приёмки:**
 
-- [ ] `/` — полноценная лендинг-главная с layout
+- [ ] `/` - полноценная лендинг-главная с layout
 
 **Промпт:** `Реализуй пакет O3: OPT-020..025`
 
 ---
 
-# Пакет O4 — Каталог и товар
+# Пакет O4 - Каталог и товар
 
-## OPT-030 — `GET /catalog` — хаб категорий
+## OPT-030 - `GET /catalog` - хаб категорий
 
 - [x] **Зависимости:** O2
 
@@ -447,11 +447,11 @@ mysql -u root furniture_platform -e "DESCRIBE leads"
 
 **Критерии приёмки:**
 
-- [ ] http://localhost:8080/catalog — 3 категории
+- [ ] http://localhost:8080/catalog - 3 категории
 
 ---
 
-## OPT-031 — `GET /catalog/{id}` с layout
+## OPT-031 - `GET /catalog/{id}` с layout
 
 - [x] **Зависимости:** OPT-030, ProductController
 
@@ -464,11 +464,11 @@ mysql -u root furniture_platform -e "DESCRIBE leads"
 
 **Критерии приёмки:**
 
-- [ ] `/catalog/1` — ETEO-D1 и ETEO-M3
+- [ ] `/catalog/1` - ETEO-D1 и ETEO-M3
 
 ---
 
-## OPT-032 — Product page: общий header/footer
+## OPT-032 - Product page: общий header/footer
 
 - [x] **Зависимости:** O2
 
@@ -482,12 +482,12 @@ mysql -u root furniture_platform -e "DESCRIBE leads"
 
 **Критерии приёмки:**
 
-- [ ] `/product/1` — единое меню с главной; конфигуратор работает
+- [ ] `/product/1` - единое меню с главной; конфигуратор работает
 - [ ] Заказ через модалку по-прежнему OK
 
 ---
 
-## OPT-033 — Placeholder изображения
+## OPT-033 - Placeholder изображения
 
 - [x] **Зависимости:** OPT-031, OPT-032
 
@@ -501,9 +501,9 @@ mysql -u root furniture_platform -e "DESCRIBE leads"
 
 ---
 
-# Пакет O5 — Заявки на КП (лиды)
+# Пакет O5 - Заявки на КП (лиды)
 
-## OPT-040 — `LeadController` + `POST /api/lead/create`
+## OPT-040 - `LeadController` + `POST /api/lead/create`
 
 - [x] **Зависимости:** OPT-001
 
@@ -511,8 +511,8 @@ mysql -u root furniture_platform -e "DESCRIBE leads"
 
 **Шаги:**
 
-1. Валидация: email, name (2–150), phone (мин. 10 цифр), organization/comment optional.
-2. CSRF — скопировать паттерн из `OrderController`.
+1. Валидация: email, name (2-150), phone (мин. 10 цифр), organization/comment optional.
+2. CSRF - скопировать паттерн из `OrderController`.
 3. INSERT в `leads`, ответ `{ "success": true, "id": N }`.
 
 **Критерии приёмки:**
@@ -530,7 +530,7 @@ curl -s -X POST http://localhost:8080/api/lead/create \
 
 ---
 
-## OPT-041 — `partials/lead-form.php`
+## OPT-041 - `partials/lead-form.php`
 
 - [x] **Зависимости:** OPT-040
 
@@ -544,11 +544,11 @@ curl -s -X POST http://localhost:8080/api/lead/create \
 
 **Критерии приёмки:**
 
-- [x] Рендер на главной без JS — поля видны
+- [x] Рендер на главной без JS - поля видны
 
 ---
 
-## OPT-042 — `site.js`: отправка lead-form
+## OPT-042 - `site.js`: отправка lead-form
 
 - [x] **Зависимости:** OPT-041, OPT-015
 
@@ -566,7 +566,7 @@ curl -s -X POST http://localhost:8080/api/lead/create \
 
 ---
 
-## OPT-043 — Блок «или оставьте заявку» на `/product/1`
+## OPT-043 - Блок «или оставьте заявку» на `/product/1`
 
 - [x] **Зависимости:** OPT-041, OPT-042, OPT-032
 
@@ -582,7 +582,7 @@ curl -s -X POST http://localhost:8080/api/lead/create \
 
 ---
 
-## OPT-044 — Подключить lead-form на главной (OPT-025)
+## OPT-044 - Подключить lead-form на главной (OPT-025)
 
 - [x] **Зависимости:** OPT-025, OPT-041
 
@@ -600,9 +600,9 @@ curl -s -X POST http://localhost:8080/api/lead/create \
 
 ---
 
-# Пакет O6 — Финальная полировка
+# Пакет O6 - Финальная полировка
 
-## OPT-050 — `order/success` в layout
+## OPT-050 - `order/success` в layout
 
 - [x] **Зависимости:** O2
 
@@ -610,13 +610,13 @@ curl -s -X POST http://localhost:8080/api/lead/create \
 
 **Критерии приёмки:**
 
-- [x] После заказа — страница с header/footer
+- [x] После заказа - страница с header/footer
 
 ---
 
-## OPT-051 — Чеклист QA для защиты
+## OPT-051 - Чеклист QA для защиты
 
-- [x] **Зависимости:** все пакеты O1–O5
+- [x] **Зависимости:** все пакеты O1-O5
 
 **Файлы:** `docs/QA-DIPLOMA.md`
 
@@ -628,7 +628,7 @@ curl -s -X POST http://localhost:8080/api/lead/create \
 
 ---
 
-## OPT-052 — Обновить статус в этом файле + ссылка в README
+## OPT-052 - Обновить статус в этом файле + ссылка в README
 
 - [x] **Зависимости:** OPT-051
 
@@ -645,12 +645,12 @@ curl -s -X POST http://localhost:8080/api/lead/create \
 
 ## Пакеты
 
-- [x] **O1-DB** — OPT-001 ⚡; OPT-002 README
-- [x] **O2-Shell** — OPT-010..016
-- [x] **O3-Home** — OPT-020..025
-- [x] **O4-Catalog** — OPT-030..033
-- [x] **O5-Leads** — OPT-040..044
-- [x] **O6-Polish** — OPT-050..052
+- [x] **O1-DB** - OPT-001 ⚡; OPT-002 README
+- [x] **O2-Shell** - OPT-010..016
+- [x] **O3-Home** - OPT-020..025
+- [x] **O4-Catalog** - OPT-030..033
+- [x] **O5-Leads** - OPT-040..044
+- [x] **O6-Polish** - OPT-050..052
 
 ## MVP-критерии (всё должно быть ✓)
 
@@ -684,4 +684,4 @@ mysql -u root furniture_platform -e "SELECT * FROM orders ORDER BY id DESC LIMIT
 
 | Дата       | Версия                                       |
 | ---------- | -------------------------------------------- |
-| 2026-05-22 | v1.0 — диплом «Оптимум», 28 задач, 6 пакетов |
+| 2026-05-22 | v1.0 - диплом «Оптимум», 28 задач, 6 пакетов |

@@ -7,15 +7,15 @@
     <!--
         CSP-заголовок устанавливается на уровне PHP/nginx, но дублируем meta
         как fallback. script-src 'self' запрещает выполнение inline-скриптов
-        из внешних источников — ключевая защита от XSS.
+        из внешних источников - ключевая защита от XSS.
     -->
     <meta http-equiv="Content-Security-Policy"
           content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self';">
 
-    <title>Диспетчерский пульт ETEO-D1 — Конфигуратор заказа</title>
+    <title>Диспетчерский пульт ETEO-D1 - Конфигуратор заказа</title>
 
     <!--
-        Критические стили инлайн — ускоряют LCP (Largest Contentful Paint).
+        Критические стили инлайн - ускоряют LCP (Largest Contentful Paint).
         Основной CSS грузится через link с media="print" onload для
         неблокирующей загрузки (паттерн оптимизации Core Web Vitals).
     -->
@@ -57,7 +57,7 @@
         <!-- Левая колонка: галерея -->
         <div class="product-gallery">
             <!--
-                loading="eager" для основного изображения — оно является LCP-элементом,
+                loading="eager" для основного изображения - оно является LCP-элементом,
                 не откладываем его загрузку.
                 fetchpriority="high" подсказывает браузеру приоритизировать загрузку.
             -->
@@ -96,7 +96,7 @@
 
         <!-- Правая колонка: конфигуратор -->
         <!--
-            data-product-id и data-base-price — атрибуты для JS-модуля.
+            data-product-id и data-base-price - атрибуты для JS-модуля.
             Цена приходит с сервера (PHP), клиент не имеет возможности
             подменить базовое значение через DOM без серверной перепроверки.
         -->
@@ -109,7 +109,7 @@
             <h2 class="configurator__title">Настройте ваш пульт</h2>
 
             <!-- ---------------------------------------------------
-                 Группа: Материал столешницы (select — взаимоисключающий)
+                 Группа: Материал столешницы (select - взаимоисключающий)
                  --------------------------------------------------- -->
             <fieldset class="config-group" data-group="material">
                 <legend class="config-group__legend">
@@ -202,7 +202,7 @@
             </fieldset>
 
             <!-- ---------------------------------------------------
-                 Группа: Дополнительные опции (checkbox — независимые)
+                 Группа: Дополнительные опции (checkbox - независимые)
                  --------------------------------------------------- -->
             <fieldset class="config-group" data-group="extras">
                 <legend class="config-group__legend">
@@ -261,7 +261,7 @@
                                data-price-modifier="22000">
                         <span class="option-card__body">
                             <span class="option-card__name">LED-подсветка рабочей зоны</span>
-                            <span class="option-card__desc">Регулируемая яркость, цветовая температура 3000–6000K</span>
+                            <span class="option-card__desc">Регулируемая яркость, цветовая температура 3000-6000K</span>
                             <span class="option-card__price">+ 22 000 ₸</span>
                         </span>
                         <span class="option-card__check-icon" aria-hidden="true"></span>
@@ -315,7 +315,7 @@
 
     <!-- ============================================================
          МОДАЛЬНОЕ ОКНО: Форма оформления заказа
-         aria-modal и role="dialog" — поддержка screen readers
+         aria-modal и role="dialog" - поддержка screen readers
          ============================================================ -->
     <div class="modal-overlay"
          id="order-modal"
@@ -426,7 +426,7 @@
                     <strong id="modal-price-display">850 000 ₸</strong>
                 </div>
 
-                <!-- Согласие с офертой — юридически обязательный элемент -->
+                <!-- Согласие с офертой - юридически обязательный элемент -->
                 <div class="form-group form-group--checkbox">
                     <label class="form-label form-label--checkbox">
                         <input type="checkbox" id="input-agree" required aria-required="true">
@@ -469,7 +469,7 @@
 </main><!-- /#product-page -->
 
 <!--
-    JS-модуль загружается с defer — не блокирует парсинг HTML,
+    JS-модуль загружается с defer - не блокирует парсинг HTML,
     выполняется после построения DOM. type="module" обеспечивает
     строгий режим и изоляцию области видимости.
 -->

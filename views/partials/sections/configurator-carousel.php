@@ -14,7 +14,7 @@ if ($configurableProducts === []) {
 <section id="configurator-models" class="section section--sm models-carousel-section" aria-labelledby="configurator-models-title">
     <div class="container">
         <h2 id="configurator-models-title" class="section__title">Конфигуратор моделей</h2>
-        <p class="section__text">Выберите мебель, настройте материалы и комплектацию — цена пересчитается сразу.</p>
+        <p class="section__text">Выберите мебель, настройте материалы и комплектацию - цена пересчитается сразу.</p>
 
         <div class="models-carousel" data-models-carousel>
             <button type="button" class="models-carousel__nav models-carousel__nav--prev" aria-label="Предыдущая модель" data-carousel-prev>‹</button>
