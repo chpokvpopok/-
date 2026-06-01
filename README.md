@@ -10,7 +10,7 @@
 
 | Компонент | Версия |
 | --------- | ------ |
-| PHP | 8.2+ с расширением `pdo_mysql` |
+| PHP | 8.2+ с расширениями `pdo_mysql` и `mbstring` (без mbstring есть запасной polyfill) |
 | MySQL | 8.x |
 | Браузер | любой современный |
 
@@ -36,6 +36,7 @@
 ```ini
 extension=pdo_mysql
 extension=mysqli
+extension=mbstring
 ```
 
 Проверка:
@@ -43,6 +44,7 @@ extension=mysqli
 ```powershell
 php -v
 php -m | findstr pdo_mysql
+php -m | findstr mbstring
 mysql --version
 ```
 
@@ -114,6 +116,7 @@ php -S localhost:8080 router.php
 | Симптом | Решение |
 | ------- | ------- |
 | `pdo_mysql` не найден | Раскомментируй `extension=pdo_mysql` в `php.ini` (`php --ini`) |
+| `Call to undefined function mb_substr()` | Включи `extension=mbstring` в `php.ini` или `git pull` (polyfill в `includes/mbstring_polyfill.php`) |
 | MySQL не отвечает | `net start MySQL80` или services.msc → запустить MySQL |
 | `Unknown database` | Повтори импорт `sql\schema.sql` |
 | Вместо русских названий `???????` | Импорт без `utf8mb4` - пересоздай базу (см. раздел «База данных») |

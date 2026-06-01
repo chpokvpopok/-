@@ -103,6 +103,12 @@ function Test-PhpPdoMysql {
     return ($mods -match 'pdo_mysql')
 }
 
+function Test-PhpMbstring {
+    param([string]$PhpExe)
+    $mods = & $PhpExe -m 2>$null
+    return ($mods -match 'mbstring')
+}
+
 # mysql: те же аргументы, что при ручном запуске; таймаут чтобы не зависать
 $script:LastMySqlOutput = ''
 
@@ -321,6 +327,12 @@ if (-not (Test-PhpPdoMysql -PhpExe $php)) {
     exit 1
 }
 Write-Host 'pdo_mysql: OK' -ForegroundColor Green
+
+if (Test-PhpMbstring -PhpExe $php) {
+    Write-Host 'mbstring: OK' -ForegroundColor Green
+} else {
+    Write-Host 'mbstring: нет (включи extension=mbstring в php.ini). Работает запасной polyfill.' -ForegroundColor Yellow
+}
 
 Write-Host 'Ищу MySQL...'
 $mysql = Find-MysqlClient

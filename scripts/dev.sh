@@ -33,6 +33,10 @@ if ! "$PHP" -r 'exit(extension_loaded("pdo_mysql") ? 0 : 1);' 2>/dev/null; then
   exit 1
 fi
 
+if ! "$PHP" -r 'exit(extension_loaded("mbstring") ? 0 : 1);' 2>/dev/null; then
+  echo "Предупреждение: mbstring не загружен — используется polyfill (лучше включить extension=mbstring)."
+fi
+
 echo "PHP: $PHP ($("$PHP" -v | head -1))"
 
 MYSQL="$(find_mysql_bin)" || {
