@@ -1,13 +1,11 @@
 -- =============================================================
 -- Скрипт обновления: Офисная мебель → Домашняя мебель
+-- Идемпотентный: безопасен при повторном запуске migrate.sh
 -- =============================================================
 
 USE furniture_platform;
 
--- Очищаем старые серии и добавляем новые
-DELETE FROM product_series;
-
--- Новые серии домашней мебели
+-- Серии домашней мебели (upsert по slug, без DELETE)
 INSERT INTO product_series (slug, name_ru, name_kk, description_ru, description_kk, sort_order)
 VALUES
 (
@@ -50,27 +48,28 @@ ON DUPLICATE KEY UPDATE
     name_ru        = VALUES(name_ru),
     name_kk        = VALUES(name_kk),
     description_ru = VALUES(description_ru),
-    description_kk = VALUES(description_kk);
+    description_kk = VALUES(description_kk),
+    sort_order     = VALUES(sort_order);
 
--- Обновляем привязки товаров к новым сериям
+-- Привязка товаров к сериям (старый и новый SKU)
 UPDATE products p
 INNER JOIN product_series ps ON ps.slug = 'bedroom-collection'
 SET p.series_id = ps.id, p.slug = 'bedroom-set-1'
-WHERE p.sku = 'ETEO-D1-BASE';
+WHERE p.sku IN ('ETEO-D1-BASE', 'BEDROOM-SET-01');
 
 UPDATE products p
 INNER JOIN product_series ps ON ps.slug = 'living-room-collection'
 SET p.series_id = ps.id, p.slug = 'living-room-set-1'
-WHERE p.sku = 'ETEO-M3-BASE';
+WHERE p.sku IN ('ETEO-M3-BASE', 'LIVING-ROOM-SET-01');
 
--- Обновляем названия и описания товаров
+-- Названия и описания товаров
 UPDATE products SET
     name_ru = 'Спальный гарнитур Premium Plus',
     name_kk = 'Ұйқы гарнитуры Premium Plus',
     description_ru = 'Премиальный набор для спальни: двуспальная кровать с ортопедическим матрасом, две прикроватные тумбочки и зеркальный шкаф. Массив натурального дерева, мягкие декоративные подушки.',
     description_kk = 'Спальня үшін премиум жиынтығы: ортопедиялық матрастық екі орындық төсек, екі прикроватті шкафша және айналық шкаф.',
     sku = 'BEDROOM-SET-01'
-WHERE sku = 'ETEO-D1-BASE';
+WHERE sku IN ('ETEO-D1-BASE', 'BEDROOM-SET-01');
 
 UPDATE products SET
     name_ru = 'Гостиный гарнитур Comfort Plus',
@@ -78,9 +77,9 @@ UPDATE products SET
     description_ru = 'Модульный набор для гостиной: уютный угловой диван, два кресла, журнальный столик и ТВ-тумба. Обивка из качественного текстиля, наполнитель из высокоэластичного поролона.',
     description_kk = 'Гостиная үшін модульдік жиынтық: бұрыштық диван, екі крестал, журнал столы және ТВ-тумба.',
     sku = 'LIVING-ROOM-SET-01'
-WHERE sku = 'ETEO-M3-BASE';
+WHERE sku IN ('ETEO-M3-BASE', 'LIVING-ROOM-SET-01');
 
--- Обновляем компетенции на домашнюю мебель
+-- Компетенции
 UPDATE pages SET
     title_ru = 'Понимание вашего образа жизни',
     title_kk = 'Өмір салтыңызды түсіну',
@@ -109,7 +108,7 @@ UPDATE pages SET
     excerpt_kk = 'Фотореалистік 3D-рендерлер жиһаз сатып алмастан дайын интерьерді ойлау үшін көмектеседі.'
 WHERE slug = 'competence-visualization';
 
--- Обновляем преимущества
+-- Преимущества
 UPDATE pages SET
     title_ru = 'Собственное производство',
     title_kk = 'Өз өндірісі',
@@ -131,9 +130,7 @@ UPDATE pages SET
     excerpt_kk = 'Өлшемдерін, түстерін және материалдарын сіздің бөлмеңіз бен талғамыңызға сәйкес таңдаймыз.'
 WHERE slug = 'advantage-custom';
 
--- Обновляем категории товаров
-DELETE FROM categories;
-
+-- Категории (upsert по slug, без DELETE пока есть товары)
 INSERT INTO categories (name_ru, name_kk, slug)
 VALUES
 ('Спальня', 'Ұйқы бөлмесі', 'bedroom'),
@@ -141,9 +138,35 @@ VALUES
 ('Кухня', 'Ас үй', 'kitchen'),
 ('Домашний офис', 'Үйлік офис', 'home-office'),
 ('Прихожая', 'Кіреу', 'entryway'),
-('Детская', 'Балалар бөлмесі', 'kids');
+('Детская', 'Балалар бөлмесі', 'kids')
+ON DUPLICATE KEY UPDATE
+    name_ru = VALUES(name_ru),
+    name_kk = VALUES(name_kk);
 
--- Обновляем сайт-настройки
+-- Перепривязка товаров к новым категориям
+UPDATE products p
+INNER JOIN categories c ON c.slug = 'bedroom'
+SET p.category_id = c.id
+WHERE p.sku IN ('ETEO-D1-BASE', 'BEDROOM-SET-01');
+
+UPDATE products p
+INNER JOIN categories c ON c.slug = 'living-room'
+SET p.category_id = c.id
+WHERE p.sku IN ('ETEO-M3-BASE', 'LIVING-ROOM-SET-01');
+
+-- Удаление старых офисных категорий (только если на них нет товаров)
+DELETE c FROM categories c
+LEFT JOIN products p ON p.category_id = c.id
+WHERE c.slug IN ('dispetcherskaya', 'tekhnologicheskaya', 'modulnye-sistemy')
+  AND p.id IS NULL;
+
+-- Удаление старых офисных серий (только если на них нет товаров)
+DELETE ps FROM product_series ps
+LEFT JOIN products p ON p.series_id = ps.id
+WHERE ps.slug IN ('eteo-one', 'eteo-flow', 'eteo-pulse')
+  AND p.id IS NULL;
+
+-- Сайт-настройки
 UPDATE site_settings SET
     value_ru = 'Четтро — премиальная домашняя мебель, которая превращает ваш дом в идеальное пространство для жизни',
     value_kk = 'Четтро — сіздің үйіңіз өндіктің идеалды кеңістіке айналдыру үшін премиум үйлік жиһаз'
@@ -151,8 +174,7 @@ WHERE setting_key = 'hero_title';
 
 UPDATE site_settings SET
     value_ru = 'Каждое изделие создано с любовью к деталям и заботой о вашем комфорте. Натуральные материалы, современный дизайн, безупречное исполнение.',
-    value_kk = 'Әр өнім деталь сүйіспе және сіздің ыңғайлықтағы батындыға арнайды.'
+    value_kk = 'Әр өнім деталь сүйіспе және сіздің ыңғайлықтағы бағандыға арнайды.'
 WHERE setting_key = 'hero_description';
 
--- Подтверждение
 SELECT '✅ Обновление завершено: офисная мебель → домашняя мебель' AS status;
