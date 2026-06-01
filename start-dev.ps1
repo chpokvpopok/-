@@ -219,7 +219,7 @@ function Start-MysqlServiceIfNeeded {
             try {
                 Write-Host "Запуск службы $name..."
                 Start-Service $name -ErrorAction Stop
-                Start-Sleep -Seconds 3
+                Start-Sleep -Seconds 2
                 return
             } catch { }
         }
