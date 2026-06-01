@@ -94,6 +94,27 @@ function Test-PhpPdoMysql {
     return ($mods -match 'pdo_mysql')
 }
 
+# mysql пишет ошибки в stderr; при $ErrorActionPreference = Stop PowerShell обрывает скрипт
+function Invoke-MySql {
+    param(
+        [Parameter(Mandatory)][string]$MySqlExe,
+        [Parameter(Mandatory)][string[]]$Arguments,
+        [string]$InputText
+    )
+    $prevEap = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        if ($null -ne $InputText) {
+            $InputText | & $MySqlExe @Arguments 2>&1 | Out-Null
+        } else {
+            & $MySqlExe @Arguments 2>&1 | Out-Null
+        }
+        return $LASTEXITCODE
+    } finally {
+        $ErrorActionPreference = $prevEap
+    }
+}
+
 function Start-MysqlServiceIfNeeded {
     $services = Get-Service -ErrorAction SilentlyContinue |
         Where-Object { $_.Name -match 'mysql' -and $_.Status -ne 'Running' }
@@ -161,27 +182,43 @@ $mysqlArgs = @('-u', $env:DB_USER)
 if ($env:DB_PASSWORD) { $mysqlArgs += @("-p$($env:DB_PASSWORD)") }
 
 Write-Host 'Проверка MySQL...'
-& $mysql @mysqlArgs -e 'SELECT 1' 2>$null | Out-Null
-if ($LASTEXITCODE -ne 0) {
+if ((Invoke-MySql -MySqlExe $mysql -Arguments ($mysqlArgs + @('-e', 'SELECT 1'))) -ne 0) {
     Write-Host 'MySQL не отвечает, пробую запустить службу...' -ForegroundColor Yellow
     Start-MysqlServiceIfNeeded
-    & $mysql @mysqlArgs -e 'SELECT 1' 2>$null | Out-Null
-    if ($LASTEXITCODE -ne 0) {
+    if ((Invoke-MySql -MySqlExe $mysql -Arguments ($mysqlArgs + @('-e', 'SELECT 1'))) -ne 0) {
         Write-Host 'ОШИБКА: не удалось подключиться к MySQL. Задай пароль: $env:DB_PASSWORD = "..."' -ForegroundColor Red
         exit 1
     }
 }
 
 Write-Host 'Проверка базы furniture_platform...'
-& $mysql @mysqlArgs -e 'USE furniture_platform' 2>$null | Out-Null
-if ($LASTEXITCODE -ne 0) {
-    Write-Host 'Создание базы из sql\schema.sql...'
+if ((Invoke-MySql -MySqlExe $mysql -Arguments ($mysqlArgs + @('-e', 'USE furniture_platform'))) -ne 0) {
+    Write-Host 'Создание базы из sql\schema.sql...' -ForegroundColor Yellow
     $schemaPath = Join-Path $projectRoot 'sql\schema.sql'
-    Get-Content -Path $schemaPath -Raw -Encoding UTF8 | & $mysql @mysqlArgs 2>$null
-    if ($LASTEXITCODE -ne 0) {
+    if (-not (Test-Path $schemaPath)) {
+        Write-Host 'ОШИБКА: не найден sql\schema.sql' -ForegroundColor Red
+        exit 1
+    }
+    $schemaSql = Get-Content -Path $schemaPath -Raw -Encoding UTF8
+    if ((Invoke-MySql -MySqlExe $mysql -Arguments $mysqlArgs -InputText $schemaSql) -ne 0) {
         Write-Host 'ОШИБКА: не удалось применить schema.sql' -ForegroundColor Red
         exit 1
     }
+    Write-Host 'База создана.' -ForegroundColor Green
+}
+
+$migrationsDir = Join-Path $projectRoot 'sql\migrations'
+if (Test-Path $migrationsDir) {
+    Write-Host 'Применение миграций...'
+    Get-ChildItem -Path $migrationsDir -Filter '*.sql' | Sort-Object Name | ForEach-Object {
+        Write-Host "  $($_.Name)"
+        $migrationSql = Get-Content -Path $_.FullName -Raw -Encoding UTF8
+        if ((Invoke-MySql -MySqlExe $mysql -Arguments $mysqlArgs -InputText $migrationSql) -ne 0) {
+            Write-Host "ОШИБКА: миграция $($_.Name) не применилась." -ForegroundColor Red
+            exit 1
+        }
+    }
+    Write-Host 'Миграции применены.' -ForegroundColor Green
 }
 
 Write-Host ''
