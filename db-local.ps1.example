@@ -1,0 +1,8 @@
+# Локальные настройки MySQL для start-dev.ps1
+# Скопируй этот файл:  copy db-local.ps1.example db-local.ps1
+# и укажи свой пароль. db-local.ps1 в git не коммитится.
+
+$env:DB_HOST = '127.0.0.1'
+$env:DB_PORT = '3307'          # или '3306'
+$env:DB_USER = 'root'
+$env:DB_PASSWORD = 'ваш_пароль' # пустая строка '' если пароля нет

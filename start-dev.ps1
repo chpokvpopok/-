@@ -10,6 +10,13 @@ if (-not (Test-Path (Join-Path $projectRoot 'router.php'))) {
     exit 1
 }
 
+# Локальные настройки БД (не в git): скопируй db-local.ps1.example → db-local.ps1
+$dbLocalPath = Join-Path $projectRoot 'db-local.ps1'
+if (Test-Path $dbLocalPath) {
+    Write-Host 'Загружаю db-local.ps1' -ForegroundColor Cyan
+    . $dbLocalPath
+}
+
 function Find-Executable {
     param(
         [string]$Name,
@@ -175,8 +182,10 @@ $env:SESSION_SECURE = 'false'
 $env:DB_HOST = if ($env:DB_HOST) { $env:DB_HOST } else { '127.0.0.1' }
 $env:DB_PORT = if ($env:DB_PORT) { $env:DB_PORT } else { '3306' }
 $env:DB_NAME = if ($env:DB_NAME) { $env:DB_NAME } else { 'furniture_platform' }
-$env:DB_USER = 'root'
+$env:DB_USER = if ($env:DB_USER) { $env:DB_USER } else { 'root' }
 if (-not $env:DB_PASSWORD) { $env:DB_PASSWORD = '' }
+
+Write-Host "MySQL: $env:DB_USER@$env:DB_HOST`:$env:DB_PORT, база $env:DB_NAME" -ForegroundColor Cyan
 
 $mysqlArgs = @('-h', $env:DB_HOST, '-P', $env:DB_PORT, '-u', $env:DB_USER)
 if ($env:DB_PASSWORD) { $mysqlArgs += @("-p$($env:DB_PASSWORD)") }
