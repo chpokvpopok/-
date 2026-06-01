@@ -103,55 +103,21 @@ function Test-PhpPdoMysql {
     return ($mods -match 'pdo_mysql')
 }
 
-# mysql пишет ошибки в stderr; при $ErrorActionPreference = Stop PowerShell обрывает скрипт
-$script:MySqlDefaultsFile = $null
+# mysql: те же аргументы, что при ручном запуске; таймаут чтобы не зависать
 $script:LastMySqlOutput = ''
 
-function Format-MyCnfValue {
-    param([string]$Value)
-    if ($Value -match '[#;\s"\\]') {
-        return '"' + ($Value.Replace('\', '\\').Replace('"', '\"')) + '"'
-    }
-    return $Value
-}
-
-function Update-MySqlDefaultsFile {
-    if ($script:MySqlDefaultsFile -and (Test-Path $script:MySqlDefaultsFile)) {
-        Remove-Item $script:MySqlDefaultsFile -Force -ErrorAction SilentlyContinue
-    }
-    $path = Join-Path $env:TEMP ("furniture-mysql-" + [guid]::NewGuid().ToString('N') + '.cnf')
-    $lines = @(
-        '[client]'
-        ('host=' + (Format-MyCnfValue $env:DB_HOST))
-        ('port=' + $env:DB_PORT)
-        ('user=' + (Format-MyCnfValue $env:DB_USER))
+function Get-MySqlClientArgs {
+    $clientArgs = @(
+        '-h', $env:DB_HOST,
+        '-P', $env:DB_PORT,
+        '-u', $env:DB_USER,
+        '--connect-timeout=3',
+        '--batch'
     )
     if ($env:DB_PASSWORD) {
-        $lines += ('password=' + (Format-MyCnfValue $env:DB_PASSWORD))
+        $clientArgs += "-p$($env:DB_PASSWORD)"
     }
-    [IO.File]::WriteAllLines($path, $lines, (New-Object System.Text.UTF8Encoding $false))
-    $script:MySqlDefaultsFile = $path
-}
-
-function Get-MySqlBaseArgs {
-    if (-not $script:MySqlDefaultsFile) { Update-MySqlDefaultsFile }
-    return @(
-        "--defaults-extra-file=$script:MySqlDefaultsFile",
-        '--connect-timeout=3'
-    )
-}
-
-function Test-MySqlPortOpen {
-    param([string]$HostName, [int]$Port)
-    try {
-        $client = New-Object System.Net.Sockets.TcpClient
-        $task = $client.ConnectAsync($HostName, $Port)
-        if (-not $task.Wait(1500)) { return $false }
-        $client.Close()
-        return $true
-    } catch {
-        return $false
-    }
+    return $clientArgs
 }
 
 function Get-MySqlServiceStatus {
@@ -159,45 +125,54 @@ function Get-MySqlServiceStatus {
         $svc = Get-Service -Name $name -ErrorAction SilentlyContinue
         if ($svc) { return $svc }
     }
-    return Get-Service -ErrorAction SilentlyContinue | Where-Object { $_.Name -match 'mysql' } | Select-Object -First 1
-}
-
-function Remove-MySqlDefaultsFile {
-    if ($script:MySqlDefaultsFile -and (Test-Path $script:MySqlDefaultsFile)) {
-        Remove-Item $script:MySqlDefaultsFile -Force -ErrorAction SilentlyContinue
-        $script:MySqlDefaultsFile = $null
-    }
+    return $null
 }
 
 function Invoke-MySql {
     param(
         [Parameter(Mandatory)][string]$MySqlExe,
         [Parameter(Mandatory)][string[]]$Arguments,
-        [string]$InputText
+        [string]$InputText,
+        [int]$TimeoutSec = 8
     )
-    $prevEap = $ErrorActionPreference
-    $ErrorActionPreference = 'SilentlyContinue'
-    $output = @()
-    try {
-        if ($PSBoundParameters.ContainsKey('InputText')) {
-            $output = @($InputText | & $MySqlExe @Arguments 2>&1)
-        } else {
-            $output = @(& $MySqlExe @Arguments 2>&1)
+    $job = Start-Job -ArgumentList @($MySqlExe, $Arguments, $InputText) -ScriptBlock {
+        param($exe, $args, $inputText)
+        $ErrorActionPreference = 'Continue'
+        try {
+            if ($null -ne $inputText -and $inputText -ne '') {
+                $output = @($inputText | & $exe @args 2>&1)
+            } else {
+                $output = @(& $exe @args 2>&1)
+            }
+            return @{
+                Code = [int]$LASTEXITCODE
+                Out  = (($output | ForEach-Object { "$_" }) -join [Environment]::NewLine)
+            }
+        } catch {
+            return @{ Code = 1; Out = $_.Exception.Message }
         }
-        $code = $LASTEXITCODE
-        if ($code -ne 0) {
-            $script:LastMySqlOutput = (($output | ForEach-Object { "$_" }) -join [Environment]::NewLine).Trim()
-        }
-        return $code
-    } finally {
-        $ErrorActionPreference = $prevEap
     }
+
+    $done = Wait-Job -Job $job -Timeout $TimeoutSec
+    if (-not $done) {
+        Stop-Job -Job $job -Force
+        Remove-Job -Job $job -Force
+        $script:LastMySqlOutput = "Таймаут ${TimeoutSec}s — проверь DB_PORT и DB_PASSWORD в db-local.ps1"
+        return 124
+    }
+
+    $result = Receive-Job -Job $job
+    Remove-Job -Job $job -Force
+    if ([int]$result.Code -ne 0) {
+        $script:LastMySqlOutput = [string]$result.Out
+    }
+    return [int]$result.Code
 }
 
 function Test-MySqlReady {
     param([string]$MySqlExe)
-    Update-MySqlDefaultsFile
-    $args = Get-MySqlBaseArgs + @('--batch', '-e', 'SELECT 1')
+    Write-Host "  mysql $($env:DB_USER)@$($env:DB_HOST):$($env:DB_PORT) ..." -ForegroundColor DarkGray
+    $args = (Get-MySqlClientArgs) + @('-e', 'SELECT 1')
     return (Invoke-MySql -MySqlExe $MySqlExe -Arguments $args) -eq 0
 }
 
@@ -272,22 +247,16 @@ if ($mysqlSvc -and $mysqlSvc.Status -ne 'Running') {
     Write-Host "Служба $($mysqlSvc.Name) остановлена, запускаю..." -ForegroundColor Yellow
     Start-MysqlServiceIfNeeded
     Start-Sleep -Seconds 2
-} elseif (-not $mysqlSvc) {
-    Write-Host 'Служба MySQL не найдена — проверяю подключение напрямую...' -ForegroundColor Yellow
 }
 
-if (-not (Test-MySqlPortOpen -HostName $env:DB_HOST -Port ([int]$env:DB_PORT))) {
-    if (-not $dbLocalLoaded -and $env:DB_PORT -eq '3306' -and (Test-MySqlPortOpen -HostName $env:DB_HOST -Port 3307)) {
-        Write-Host 'На 3306 нет ответа, MySQL слушает 3307 — переключаю порт.' -ForegroundColor Yellow
-        $env:DB_PORT = '3307'
-    } else {
-        Write-Host "Порт $($env:DB_PORT) не отвечает, пробую запустить службу..." -ForegroundColor Yellow
-        Start-MysqlServiceIfNeeded
-        Start-Sleep -Seconds 2
-    }
+$mysqlOk = Test-MySqlReady -MySqlExe $mysql
+if (-not $mysqlOk -and -not $dbLocalLoaded -and $env:DB_PORT -eq '3306') {
+    Write-Host 'Пробую порт 3307...' -ForegroundColor Yellow
+    $env:DB_PORT = '3307'
+    $mysqlOk = Test-MySqlReady -MySqlExe $mysql
 }
 
-if (-not (Test-MySqlReady -MySqlExe $mysql)) {
+if (-not $mysqlOk) {
     Write-Host ''
     Write-Host 'ОШИБКА: не удалось подключиться к MySQL.' -ForegroundColor Red
     Write-Host "  Хост:   $env:DB_HOST`:$env:DB_PORT" -ForegroundColor Yellow
@@ -305,11 +274,10 @@ if (-not (Test-MySqlReady -MySqlExe $mysql)) {
     } else {
         Write-Host '  db-local.ps1 загружен — проверь DB_PORT и DB_PASSWORD в файле.' -ForegroundColor Yellow
     }
-    Remove-MySqlDefaultsFile
     exit 1
 }
 
-$mysqlArgs = Get-MySqlBaseArgs + @('--batch')
+$mysqlArgs = Get-MySqlClientArgs
 
 Write-Host "Проверка базы $env:DB_NAME..."
 if ((Invoke-MySql -MySqlExe $mysql -Arguments ($mysqlArgs + @('-e', "USE $env:DB_NAME"))) -ne 0) {
@@ -340,8 +308,6 @@ if (Test-Path $migrationsDir) {
     }
     Write-Host 'Миграции применены.' -ForegroundColor Green
 }
-
-Remove-MySqlDefaultsFile
 
 Write-Host ''
 Write-Host '========================================' -ForegroundColor Cyan
