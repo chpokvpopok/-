@@ -172,13 +172,13 @@ Write-Host "MySQL: $mysql" -ForegroundColor Green
 $env:APP_DEBUG = 'true'
 $env:APP_URL = 'http://localhost:8080'
 $env:SESSION_SECURE = 'false'
-$env:DB_HOST = '127.0.0.1'
-$env:DB_PORT = '3306'
-$env:DB_NAME = 'furniture_platform'
+$env:DB_HOST = if ($env:DB_HOST) { $env:DB_HOST } else { '127.0.0.1' }
+$env:DB_PORT = if ($env:DB_PORT) { $env:DB_PORT } else { '3306' }
+$env:DB_NAME = if ($env:DB_NAME) { $env:DB_NAME } else { 'furniture_platform' }
 $env:DB_USER = 'root'
 if (-not $env:DB_PASSWORD) { $env:DB_PASSWORD = '' }
 
-$mysqlArgs = @('-u', $env:DB_USER)
+$mysqlArgs = @('-h', $env:DB_HOST, '-P', $env:DB_PORT, '-u', $env:DB_USER)
 if ($env:DB_PASSWORD) { $mysqlArgs += @("-p$($env:DB_PASSWORD)") }
 
 Write-Host 'Проверка MySQL...'
@@ -191,8 +191,8 @@ if ((Invoke-MySql -MySqlExe $mysql -Arguments ($mysqlArgs + @('-e', 'SELECT 1'))
     }
 }
 
-Write-Host 'Проверка базы furniture_platform...'
-if ((Invoke-MySql -MySqlExe $mysql -Arguments ($mysqlArgs + @('-e', 'USE furniture_platform'))) -ne 0) {
+Write-Host "Проверка базы $env:DB_NAME..."
+if ((Invoke-MySql -MySqlExe $mysql -Arguments ($mysqlArgs + @('-e', "USE $env:DB_NAME"))) -ne 0) {
     Write-Host 'Создание базы из sql\schema.sql...' -ForegroundColor Yellow
     $schemaPath = Join-Path $projectRoot 'sql\schema.sql'
     if (-not (Test-Path $schemaPath)) {
