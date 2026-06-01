@@ -51,12 +51,12 @@ mysql --version
 Из корня проекта (PowerShell или CMD):
 
 ```powershell
-# Пустой пароль root (учебная установка):
-mysql -u root < sql\schema.sql
+# Пустой пароль root (учебная установка). Обязательно utf8mb4, иначе кириллица станет «???????»:
+mysql -u root --default-character-set=utf8mb4 < sql\schema.sql
 
 # Если у root есть пароль:
 $env:DB_PASSWORD = "ваш_пароль"
-mysql -u root -p$env:DB_PASSWORD < sql\schema.sql
+mysql -u root -p$env:DB_PASSWORD --default-character-set=utf8mb4 < sql\schema.sql
 ```
 
 Дополнительные таблицы (лиды, контент):
@@ -65,10 +65,17 @@ mysql -u root -p$env:DB_PASSWORD < sql\schema.sql
 # Git Bash или WSL:
 ./sql/migrate.sh
 
-# Или вручную:
-Get-Content sql\migrations\001_content_tables.sql -Raw -Encoding UTF8 | mysql -u root furniture_platform
-Get-Content sql\migrations\002_alter_products.sql -Raw -Encoding UTF8 | mysql -u root furniture_platform
-Get-Content sql\migrations\003_seed_content.sql -Raw -Encoding UTF8 | mysql -u root furniture_platform
+# Или вручную (UTF8 в файле + utf8mb4 в клиенте mysql):
+Get-Content sql\migrations\001_content_tables.sql -Raw -Encoding UTF8 | mysql -u root --default-character-set=utf8mb4 furniture_platform
+Get-Content sql\migrations\002_alter_products.sql -Raw -Encoding UTF8 | mysql -u root --default-character-set=utf8mb4 furniture_platform
+Get-Content sql\migrations\003_seed_content.sql -Raw -Encoding UTF8 | mysql -u root --default-character-set=utf8mb4 furniture_platform
+```
+
+Если после `git pull` в каталоге вместо «Спальня» / «Домашний офис» видно `???????` - база уже испорчена при импорте. Пересоздайте её:
+
+```powershell
+mysql -u root -e "DROP DATABASE IF EXISTS furniture_platform; CREATE DATABASE furniture_platform CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+.\start-dev.ps1
 ```
 
 Настройки БД по умолчанию в `config/config.php`: host `localhost`, user `root`, пароль пустой, база `furniture_platform`. Переопределение через переменные окружения: `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`.
@@ -109,6 +116,7 @@ php -S localhost:8080 router.php
 | `pdo_mysql` не найден | Раскомментируй `extension=pdo_mysql` в `php.ini` (`php --ini`) |
 | MySQL не отвечает | `net start MySQL80` или services.msc → запустить MySQL |
 | `Unknown database` | Повтори импорт `sql\schema.sql` |
+| Вместо русских названий `???????` | Импорт без `utf8mb4` - пересоздай базу (см. раздел «База данных») |
 | Скрипты PowerShell заблокированы | `Set-ExecutionPolicy -Scope Process Bypass` или используй `start-dev.cmd` |
 
 ## Запуск на macOS / Linux

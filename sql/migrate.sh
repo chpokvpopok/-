@@ -30,7 +30,7 @@ if ! command -v "$MYSQL_BIN" >/dev/null 2>&1; then
   err "Клиент mysql не найден. Установите MySQL или задайте MYSQL=/path/to/mysql"
 fi
 
-mysql_args=(-h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER")
+mysql_args=(-h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" --default-character-set=utf8mb4)
 if [[ -n "$DB_PASSWORD" ]]; then
   mysql_args+=(-p"$DB_PASSWORD")
 fi

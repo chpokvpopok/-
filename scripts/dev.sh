@@ -50,7 +50,7 @@ export DB_NAME="${DB_NAME:-furniture_platform}"
 export DB_USER="${DB_USER:-root}"
 export DB_PASSWORD="${DB_PASSWORD:-}"
 
-MYSQL_ARGS=(-u "$DB_USER")
+MYSQL_ARGS=(-u "$DB_USER" --default-character-set=utf8mb4)
 [[ -n "$DB_PASSWORD" ]] && MYSQL_ARGS+=(-p"$DB_PASSWORD")
 
 echo "MySQL: $MYSQL"

@@ -111,6 +111,7 @@ function Get-MySqlClientArgs {
         '-h', $env:DB_HOST,
         '-P', $env:DB_PORT,
         '-u', $env:DB_USER,
+        '--default-character-set=utf8mb4',
         '--connect-timeout=3',
         '--batch'
     )
