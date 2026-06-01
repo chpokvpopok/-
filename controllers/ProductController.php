@@ -126,6 +126,7 @@ class ProductController
                 p.base_price,
                 p.image_preview,
                 p.sku,
+                p.slug,
                 c.name_{$locale}  AS category_name
             FROM products p
             INNER JOIN categories c ON c.id = p.category_id
@@ -216,6 +217,7 @@ class ProductController
                 p.base_price,
                 p.image_preview,
                 p.sku,
+                p.slug,
                 p.category_id,
                 c.name_{$locale}  AS category_name,
                 c.slug            AS category_slug
@@ -233,6 +235,64 @@ class ProductController
         if ($product === false) {
             return null;
         }
+
+        return $this->attachProductOptions($product, $locale);
+    }
+
+    /**
+     * Товар по URL-slug (для ссылок вида /product/bedroom-set-1).
+     *
+     * @return array<string, mixed>|null
+     */
+    public function getProductBySlug(string $slug, string $locale = 'ru'): ?array
+    {
+        $slug = trim($slug);
+
+        if ($slug === '') {
+            return null;
+        }
+
+        $locale  = in_array($locale, ['ru', 'kk'], true) ? $locale : 'ru';
+        $nameCol = "p.name_{$locale}";
+        $descCol = "p.description_{$locale}";
+
+        $sql = "
+            SELECT
+                p.id,
+                {$nameCol}        AS name,
+                {$descCol}        AS description,
+                p.base_price,
+                p.image_preview,
+                p.sku,
+                p.slug,
+                p.category_id,
+                c.name_{$locale}  AS category_name,
+                c.slug            AS category_slug
+            FROM products p
+            INNER JOIN categories c ON c.id = p.category_id
+            WHERE p.slug = :slug
+              AND p.active = 1
+            LIMIT 1
+        ";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([':slug' => $slug]);
+        $product = $stmt->fetch();
+
+        if ($product === false) {
+            return null;
+        }
+
+        return $this->attachProductOptions($product, $locale);
+    }
+
+    /**
+     * @param array<string, mixed> $product
+     * @return array<string, mixed>
+     */
+    private function attachProductOptions(array $product, string $locale): array
+    {
+        $productId = (int)$product['id'];
 
         // Загружаем опции этого товара
         $optSql = "

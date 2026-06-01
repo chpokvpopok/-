@@ -53,7 +53,7 @@
                     Адрес доставки <span class="required" aria-hidden="true">*</span>
                 </label>
                 <input type="text" class="form-control" id="input-address"
-                       placeholder="ул. Абая, 10, офис 5" autocomplete="street-address"
+                       placeholder="ул. Абая, 10, кв. 5" autocomplete="street-address"
                        maxlength="500" required aria-required="true">
                 <span class="form-error" id="error-address" role="alert"></span>
             </div>

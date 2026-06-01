@@ -14,7 +14,9 @@ foreach ($product['options'] as $opt) {
     $optionGroups[$group][] = $opt;
 }
 
-$productImage = product_image($product['image_preview'] ?? null);
+$productImage   = product_image($product['image_preview'] ?? null);
+$configMeta     = product_configurator_meta((string)($product['sku'] ?? ''));
+$hasOptions     = !empty($product['options']);
 ?>
 <main class="product-page">
 
@@ -52,17 +54,21 @@ $productImage = product_image($product['image_preview'] ?? null);
              aria-label="Конфигуратор заказа">
 
             <h2 class="configurator__title">Настройте ваш заказ</h2>
+            <?php if ($configMeta !== null): ?>
+                <p class="configurator__criteria text-muted"><?= e($configMeta['intro']) ?></p>
+            <?php endif; ?>
+
+            <?php if (!$hasOptions): ?>
+                <p class="section__text">Для этой модели конфигуратор временно недоступен. Оставьте заявку менеджеру ниже.</p>
+            <?php endif; ?>
 
             <?php foreach ($optionGroups as $groupKey => $groupOptions): ?>
 
                 <?php
                 $groupType   = $groupOptions[0]['option_type'];
-                $groupLabels = [
-                    'material' => 'Материал рабочей поверхности',
-                    'config'   => 'Конфигурация стола',
-                    'extras'   => 'Дополнительное оснащение',
-                ];
-                $groupLabel = $groupLabels[$groupKey] ?? ucfirst($groupKey);
+                $groupLabel  = $configMeta['groups'][$groupKey]
+                    ?? $groupOptions[0]['option_name']
+                    ?? ucfirst($groupKey);
                 ?>
 
                 <fieldset class="config-group" data-group="<?= e($groupKey) ?>">
@@ -75,7 +81,8 @@ $productImage = product_image($product['image_preview'] ?? null);
                             $priceStr = $modifier > 0
                                 ? '+ ' . format_price($modifier)
                                 : ($modifier < 0 ? '− ' . format_price(abs($modifier)) : 'Включено');
-                            $isFirst  = ($i === 0);
+                            $isFirst      = ($i === 0);
+                            $choiceLabel  = option_choice_label($opt);
                             ?>
 
                             <?php if ($groupType === 'select'): ?>
@@ -83,12 +90,12 @@ $productImage = product_image($product['image_preview'] ?? null);
                                     <input
                                         type="radio"
                                         name="option_<?= e($groupKey) ?>"
-                                        value="<?= (float)$modifier ?>"
+                                        value="<?= (int)$opt['id'] ?>"
                                         data-option-id="<?= (int)$opt['id'] ?>"
                                         data-price-modifier="<?= (float)$modifier ?>"
                                         <?= $isFirst ? 'checked' : '' ?>>
                                     <span class="option-card__body">
-                                        <span class="option-card__name"><?= e($opt['option_name']) ?></span>
+                                        <span class="option-card__name"><?= e($choiceLabel) ?></span>
                                         <span class="option-card__price"><?= e($priceStr) ?></span>
                                     </span>
                                 </label>
@@ -97,11 +104,11 @@ $productImage = product_image($product['image_preview'] ?? null);
                                     <input
                                         type="checkbox"
                                         name="option_extras"
-                                        value="<?= (float)$modifier ?>"
+                                        value="<?= (int)$opt['id'] ?>"
                                         data-option-id="<?= (int)$opt['id'] ?>"
                                         data-price-modifier="<?= (float)$modifier ?>">
                                     <span class="option-card__body">
-                                        <span class="option-card__name"><?= e($opt['option_name']) ?></span>
+                                        <span class="option-card__name"><?= e($choiceLabel) ?></span>
                                         <span class="option-card__price"><?= e($priceStr) ?></span>
                                     </span>
                                     <span class="option-card__check-icon" aria-hidden="true"></span>
@@ -136,9 +143,21 @@ $productImage = product_image($product['image_preview'] ?? null);
     <?php include __DIR__ . '/modal_order.php'; ?>
 
     <?php
+    $currentProductSlug = (string)($product['slug'] ?? '');
+    include __DIR__ . '/../partials/sections/configurator-models-grid.php';
+    ?>
+
+    <?php
     $relatedVariants = get_catalog_variants_except_product(
-        (int)$product['category_id'],
-        (int)$product['id']
+        [
+            'id'   => (int)$product['category_id'],
+            'slug' => (string)($product['category_slug'] ?? ''),
+        ],
+        [
+            'id'   => (int)$product['id'],
+            'slug' => (string)($product['slug'] ?? ''),
+        ],
+        $configurableProducts ?? []
     );
     ?>
     <?php if (!empty($relatedVariants)): ?>
@@ -160,7 +179,7 @@ $productImage = product_image($product['image_preview'] ?? null);
 
     <section class="product-lead">
         <h2 class="product-lead__title">Или оставьте заявку менеджеру</h2>
-        <p class="product-lead__text">Подготовим коммерческое предложение без оформления заказа.</p>
+        <p class="product-lead__text">Подготовим расчёт и коммерческое предложение без оформления заказа.</p>
         <?php
         $leadSource = 'product';
         $leadCompact = true;

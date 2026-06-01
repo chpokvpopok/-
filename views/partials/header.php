@@ -19,16 +19,12 @@ require __DIR__ . '/contacts.php';
             <a class="site-nav__link" href="/">Главная</a>
             <a class="site-nav__link" href="/catalog">Каталог</a>
             <a class="site-nav__link" href="/#cases">Кейсы</a>
-            <a class="site-nav__link" href="/product/1">Конфигуратор</a>
+            <a class="site-nav__link" href="/#configurator-models">Конфигуратор</a>
         </nav>
 
         <div class="site-contact">
             <a class="site-nav__link" href="<?= e($contactPhoneHref) ?>"><?= e($contactPhone) ?></a>
             <a class="site-nav__link" href="mailto:<?= e($contactEmail) ?>"><?= e($contactEmail) ?></a>
-        </div>
-
-        <div class="site-actions">
-            <a class="btn btn--primary" href="/catalog">Каталог</a>
         </div>
     </div>
 </header>

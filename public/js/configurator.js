@@ -106,8 +106,16 @@ const Configurator = (() => {
         state.productId  = parseInt(configuratorEl.dataset.productId,  10) || 0;
         state.basePrice  = parseFloat(configuratorEl.dataset.basePrice) || 0;
         state.currentPrice = state.basePrice;
+        state.selectedOptions.clear();
 
-        // Первоначальный рендер цены
+        configuratorEl.querySelectorAll('input[data-option-id]:checked').forEach((input) => {
+            const id = parseInt(input.dataset.optionId, 10);
+            if (id) {
+                state.selectedOptions.add(id);
+            }
+        });
+
+        recalculatePrice();
         renderPrice();
 
         // Навешиваем слушатели
@@ -153,12 +161,8 @@ const Configurator = (() => {
         const priceModifier  = parseFloat(input.dataset.priceModifier) || 0;
 
         if (input.type === 'radio') {
-            // Для radio: снимаем все опции из той же группы name,
-            // затем добавляем текущую (если это не нулевой модификатор)
             removeOptionsByName(input.name);
-            if (priceModifier > 0) {
-                state.selectedOptions.add(optionId);
-            }
+            state.selectedOptions.add(optionId);
         } else if (input.type === 'checkbox') {
             // Для checkbox: просто переключаем наличие в Set
             if (input.checked) {

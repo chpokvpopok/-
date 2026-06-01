@@ -30,8 +30,8 @@ $formClass   = 'lead-form js-lead-form' . ($leadCompact ? ' lead-form--compact' 
             <input type="tel" name="phone" placeholder="+7 777 777 77 77" required autocomplete="tel">
         </label>
         <label>
-            Организация
-            <input type="text" name="organization" placeholder="ООО «Пример»" autocomplete="organization">
+            Город / примечание
+            <input type="text" name="organization" placeholder="Алматы, доставка в будни" autocomplete="organization">
         </label>
         <label class="lead-form-full">
             Комментарий
@@ -41,7 +41,7 @@ $formClass   = 'lead-form js-lead-form' . ($leadCompact ? ' lead-form--compact' 
 
     <p class="lead-form__consent">
         Нажимая «Отправить», вы соглашаетесь с
-        <a href="#">политикой конфиденциальности</a>.
+        <a href="/privacy">политикой конфиденциальности</a>.
     </p>
 
     <div class="lead-form__message" role="status" aria-live="polite"></div>

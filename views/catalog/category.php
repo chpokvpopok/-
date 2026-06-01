@@ -1,9 +1,7 @@
 <?php
 declare(strict_types=1);
 
-$categoryId = (int)$category['id'];
-$direction  = get_catalog_direction($categoryId);
-$variants   = get_catalog_variants($categoryId);
+$variants = get_catalog_variants_for_category($category, $products ?? []);
 ?>
 <main class="page-wrap section">
     <div class="container">
@@ -16,9 +14,6 @@ $variants   = get_catalog_variants($categoryId);
         </nav>
 
         <h1 class="page-title"><?= e($category['name']) ?></h1>
-        <?php if ($direction !== null): ?>
-            <p class="section__text"><?= e($direction['description']) ?></p>
-        <?php endif; ?>
 
         <?php if (!empty($variants)): ?>
             <section id="variants" class="catalog-variants">
@@ -30,7 +25,7 @@ $variants   = get_catalog_variants($categoryId);
         <?php endif; ?>
 
         <?php if (empty($products)): ?>
-            <p class="section__text">Конфигуратор пока доступен для моделей Quattro D1 и Quattro M3 в разделе «Диспетчерская мебель».</p>
+            <p class="section__text">В этой категории пока нет активных моделей. Откройте <a href="/catalog">общий каталог</a>.</p>
             <a class="btn btn--primary" href="/catalog">← К каталогу</a>
         <?php else: ?>
             <h2 class="catalog-section-title">Модели с конфигуратором</h2>
@@ -45,9 +40,10 @@ $variants   = get_catalog_variants($categoryId);
                             height="240"
                             loading="lazy">
                         <h3><?= e($item['name']) ?></h3>
-                        <p class="text-muted"><?= e($item['sku']) ?></p>
                         <p class="catalog-card__price">от <?= format_price((float)$item['base_price']) ?></p>
-                        <a class="btn btn--primary" href="/product/<?= (int)$item['id'] ?>">Настроить</a>
+                        <a class="btn btn--primary" href="<?= e(product_href($item)) ?>">
+                            <?= !empty($item['options']) ? 'Настроить' : 'Подробнее' ?>
+                        </a>
                     </article>
                 <?php endforeach; ?>
             </div>

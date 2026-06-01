@@ -76,6 +76,55 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    document.querySelectorAll('[data-models-carousel]').forEach((root) => {
+        const slides = Array.from(root.querySelectorAll('[data-carousel-slide]'));
+        const dots = Array.from(root.querySelectorAll('[data-carousel-dot]'));
+        const prevBtn = root.querySelector('[data-carousel-prev]');
+        const nextBtn = root.querySelector('[data-carousel-next]');
+        const track = root.querySelector('[data-carousel-track]');
+
+        if (slides.length === 0 || !track) {
+            return;
+        }
+
+        let index = slides.findIndex((slide) => slide.classList.contains('is-active'));
+        if (index < 0) {
+            index = 0;
+        }
+
+        const showSlide = (nextIndex) => {
+            const total = slides.length;
+            index = (nextIndex + total) % total;
+
+            slides.forEach((slide, i) => {
+                const active = i === index;
+                slide.classList.toggle('is-active', active);
+                slide.setAttribute('aria-hidden', String(!active));
+            });
+
+            dots.forEach((dot, i) => {
+                const active = i === index;
+                dot.classList.toggle('is-active', active);
+                dot.setAttribute('aria-selected', String(active));
+            });
+
+        };
+
+        prevBtn?.addEventListener('click', () => showSlide(index - 1));
+        nextBtn?.addEventListener('click', () => showSlide(index + 1));
+
+        dots.forEach((dot) => {
+            dot.addEventListener('click', () => {
+                const target = Number(dot.getAttribute('data-carousel-dot'));
+                if (!Number.isNaN(target)) {
+                    showSlide(target);
+                }
+            });
+        });
+
+        showSlide(index);
+    });
+
     document.querySelectorAll('.js-lead-form').forEach((form) => {
         form.addEventListener('submit', async (event) => {
             event.preventDefault();

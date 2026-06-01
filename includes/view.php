@@ -22,7 +22,7 @@ function render(string $view, array $data = [], array $layout = []): void
     extract($data, EXTR_SKIP);
 
     $pageTitle       = $layout['pageTitle'] ?? $data['pageTitle'] ?? 'Quattro';
-    $pageDescription = $layout['pageDescription'] ?? $data['pageDescription'] ?? 'Quattro — мебель для диспетчерских центров, офисов и модульных пространств.';
+    $pageDescription = $layout['pageDescription'] ?? $data['pageDescription'] ?? 'Quattro — стильная домашняя мебель с онлайн-конфигуратором.';
     $bodyClass       = $layout['bodyClass'] ?? $data['bodyClass'] ?? '';
     $extraCss        = $layout['extraCss'] ?? $data['extraCss'] ?? [];
     $extraJs         = $layout['extraJs'] ?? $data['extraJs'] ?? [];

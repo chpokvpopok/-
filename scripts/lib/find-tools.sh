@@ -48,7 +48,7 @@ _find_php_windows() {
   local best="" best_ver="0" ver
   for exe in "${candidates[@]}"; do
     [[ -x "$exe" ]] || continue
-    "$exe" -r 'exit version_compare(PHP_VERSION,"8.2.0",">=")?0:1;' 2>/dev/null || continue
+    "$exe" -r 'exit(version_compare(PHP_VERSION,"8.2.0",">=")?0:1);' 2>/dev/null || continue
     ver="$("$exe" -r 2>/dev/null || echo 0)"
     if [[ "$(printf '%s\n%s\n' "$best_ver" "$ver" | sort -V | tail -1)" == "$ver" ]]; then
       best="$exe"

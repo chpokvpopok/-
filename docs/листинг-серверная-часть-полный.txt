@@ -1,0 +1,2738 @@
+================================================================
+ЛИСТИНГ ПРОГРАММНОГО КОДА СЕРВЕРНОЙ ЧАСТИ
+И СКРИПТОВ СОЗДАНИЯ СХЕМЫ БАЗЫ ДАННЫХ
+ИС «Quattro — платформа домашней мебели»
+Дата: 2026-06-02
+================================================================
+
+ЧАСТЬ A. СЕРВЕРНОЕ ПРИЛОЖЕНИЕ (PHP)
+================================================================
+
+
+################################################################
+# ФАЙЛ: index.php
+################################################################
+
+     1	<?php
+     2	/**
+     3	 * index.php — Единая точка входа (Front Controller)
+     4	 *
+     5	 * ВСЕ запросы к сайту проходят через этот файл.
+     6	 * .htaccess перенаправляет сюда любой URL, который не является
+     7	 * реальным файлом или папкой.
+     8	 *
+     9	 * Задачи этого файла:
+    10	 *  1. Настроить окружение (сессия, заголовки безопасности)
+    11	 *  2. Разобрать URL и определить нужный контроллер + метод
+    12	 *  3. Вызвать контроллер и вернуть ответ
+    13	 *
+    14	 * Маршруты:
+    15	 *   GET  /                          → Главная страница
+    16	 *   GET  /catalog                   → Хаб категорий
+    17	 *   GET  /catalog/{categoryId}      → Товары категории
+    18	 *   GET  /product/{productId}       → Карточка товара с конфигуратором
+    19	 *   GET  /api/product/{id}          → JSON: данные товара
+    20	 *   GET  /api/csrf-token            → JSON: CSRF-токен
+    21	 *   POST /api/order/create          → JSON: создание заказа
+    22	 *   POST /api/lead/create           → JSON: заявка на КП
+    23	 *   GET  /order/success/{orderId}   → Страница подтверждения заказа
+    24	 *   GET  /cart                      → Корзина
+    25	 *   GET  /privacy                   → Политика конфиденциальности
+    26	 */
+    27	
+    28	declare(strict_types=1);
+    29	
+    30	// ------------------------------------------------------------------
+    31	// Автозагрузка классов (PSR-4 упрощённый вариант без Composer)
+    32	// ------------------------------------------------------------------
+    33	spl_autoload_register(function (string $className): void {
+    34	    // Преобразуем namespace в путь к файлу:
+    35	    // App\Controllers\OrderController → /controllers/OrderController.php
+    36	    $prefix   = 'App\\';
+    37	    $baseDir  = __DIR__ . '/';
+    38	
+    39	    if (str_starts_with($className, $prefix)) {
+    40	        $relative = substr($className, strlen($prefix));
+    41	        $parts    = explode('\\', $relative);
+    42	        // Папки в проекте в нижнем регистре: controllers/, config/
+    43	        if (isset($parts[0])) {
+    44	            $parts[0] = strtolower($parts[0]);
+    45	        }
+    46	        $file = $baseDir . implode('/', $parts) . '.php';
+    47	
+    48	        if (file_exists($file)) {
+    49	            require_once $file;
+    50	        }
+    51	    }
+    52	});
+    53	
+    54	// ------------------------------------------------------------------
+    55	// Загрузка конфига
+    56	// ------------------------------------------------------------------
+    57	$config = require __DIR__ . '/config/config.php';
+    58	
+    59	// ------------------------------------------------------------------
+    60	// Заголовки безопасности HTTP
+    61	// Устанавливаем ДО любого вывода.
+    62	// ------------------------------------------------------------------
+    63	
+    64	// Запрет встраивания в iframe — защита от Clickjacking
+    65	header('X-Frame-Options: DENY');
+    66	
+    67	// Запрет MIME-сниффинга браузером
+    68	header('X-Content-Type-Options: nosniff');
+    69	
+    70	require_once __DIR__ . '/includes/view.php';
+    71	
+    72	// Принудительное использование HTTPS на 1 год (только для production)
+    73	if (!$config['app']['debug']) {
+    74	    header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
+    75	}
+    76	
+    77	// Content Security Policy: разрешаем скрипты/стили только с нашего домена
+    78	header("Content-Security-Policy: default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data:;");
+    79	
+    80	// Запрет отправки Referer на другие домены
+    81	header('Referrer-Policy: same-origin');
+    82	
+    83	// ------------------------------------------------------------------
+    84	// Инициализация сессии с безопасными параметрами
+    85	// ------------------------------------------------------------------
+    86	if (session_status() === PHP_SESSION_NONE) {
+    87	    $sess = $config['session'];
+    88	
+    89	    session_set_cookie_params([
+    90	        'lifetime' => $sess['lifetime'],
+    91	        'path'     => '/',
+    92	        'domain'   => '',
+    93	        'secure'   => $sess['secure'],
+    94	        'httponly' => $sess['httponly'],
+    95	        'samesite' => $sess['samesite'],
+    96	    ]);
+    97	
+    98	    session_start();
+    99	
+   100	    // Защита от Session Fixation: обновляем ID сессии при каждом запуске
+   101	    // (в production делать только при логине, здесь для простоты)
+   102	}
+   103	
+   104	// ------------------------------------------------------------------
+   105	// Определение языка интерфейса
+   106	// ------------------------------------------------------------------
+   107	$allowedLocales   = $config['app']['locales'];
+   108	$locale           = $_GET['lang'] ?? $_SESSION['locale'] ?? $config['app']['default_locale'];
+   109	
+   110	if (!in_array($locale, $allowedLocales, true)) {
+   111	    $locale = $config['app']['default_locale'];
+   112	}
+   113	$_SESSION['locale'] = $locale;
+   114	
+   115	// ------------------------------------------------------------------
+   116	// Маршрутизация
+   117	// ------------------------------------------------------------------
+   118	
+   119	// Получаем чистый URI без query string и нормализуем
+   120	$requestUri    = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+   121	$requestMethod = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
+   122	
+   123	// Сайт в подпапке (например /shop/ в htdocs) — убираем префикс из URI
+   124	$scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? ''));
+   125	if ($scriptDir !== '/' && $scriptDir !== '' && str_starts_with($requestUri, $scriptDir)) {
+   126	    $requestUri = substr($requestUri, strlen($scriptDir)) ?: '/';
+   127	}
+   128	if ($requestUri === '/index.php') {
+   129	    $requestUri = '/';
+   130	}
+   131	$requestUri = '/' . trim($requestUri, '/');
+   132	if ($requestUri !== '/') {
+   133	    $requestUri = rtrim($requestUri, '/');
+   134	}
+   135	
+   136	// Разбиваем URI на сегменты: "/product/42" → ['product', '42']
+   137	$segments = array_values(array_filter(explode('/', $requestUri)));
+   138	
+   139	// Первый сегмент — «раздел», второй — параметр
+   140	$section = $segments[0] ?? '';
+   141	$param   = $segments[1] ?? '';
+   142	$subParam = $segments[2] ?? '';
+   143	
+   144	// ------------------------------------------------------------------
+   145	// Таблица маршрутов
+   146	// ------------------------------------------------------------------
+   147	
+   148	try {
+   149	
+   150	    // ---- GET / (главная страница) --------------------------------
+   151	    if ($requestUri === '/' && $requestMethod === 'GET') {
+   152	        $controller = new App\Controllers\ProductController();
+   153	        $products   = $controller->getProductsByCategory(0, $locale);
+   154	        $categories = $controller->getCategories($locale);
+   155	        render('home', [
+   156	            'products' => $products,
+   157	            'categories' => $categories,
+   158	            'pageTitle' => 'Quattro — домашняя мебель',
+   159	            'pageDescription' => 'Quattro: стильная домашняя мебель для спальни, гостиной, кухни и домашнего офиса с онлайн-конфигуратором.',
+   160	            'bodyClass' => 'page-home',
+   161	        ]);
+   162	        exit;
+   163	    }
+   164	
+   165	    // ---- GET /catalog и GET /catalog/{categoryId} -----------------
+   166	    if ($section === 'catalog' && $requestMethod === 'GET') {
+   167	        $controller = new App\Controllers\ProductController();
+   168	
+   169	        if ($param === '') {
+   170	            $categories = $controller->getCategories($locale);
+   171	            $products   = $controller->getProductsByCategory(0, $locale);
+   172	            render('catalog/index', [
+   173	                'categories' => $categories,
+   174	                'products'   => $products,
+   175	                'pageTitle' => 'Каталог',
+   176	                'pageDescription' => 'Категории домашней мебели Quattro: спальня, гостиная, кухня и другие комнаты.',
+   177	                'bodyClass' => 'page-catalog',
+   178	            ]);
+   179	            exit;
+   180	        }
+   181	
+   182	        $categoryId = (int)$param;
+   183	        $category   = $controller->getCategoryById($categoryId, $locale);
+   184	
+   185	        if ($category === null) {
+   186	            http_response_code(404);
+   187	            render('errors/404', ['pageTitle' => '404 — Страница не найдена']);
+   188	            exit;
+   189	        }
+   190	
+   191	        $products = $controller->getProductsByCategory($categoryId, $locale);
+   192	        render('catalog/category', [
+   193	            'category' => $category,
+   194	            'products' => $products,
+   195	            'pageTitle' => $category['name'] . ' — каталог',
+   196	            'pageDescription' => 'Каталог товаров категории ' . $category['name'],
+   197	            'bodyClass' => 'page-catalog',
+   198	        ]);
+   199	        exit;
+   200	    }
+   201	
+   202	    // ---- GET /product/{id|slug} — карточка товара ----------------
+   203	    if ($section === 'product' && $requestMethod === 'GET') {
+   204	        $controller = new App\Controllers\ProductController();
+   205	        $product    = ctype_digit((string)$param)
+   206	            ? $controller->getProductById((int)$param, $locale)
+   207	            : $controller->getProductBySlug((string)$param, $locale);
+   208	
+   209	        if ($product === null) {
+   210	            http_response_code(404);
+   211	            render('errors/404', ['pageTitle' => '404 — Страница не найдена']);
+   212	            exit;
+   213	        }
+   214	
+   215	        $description = mb_substr(strip_tags($product['description'] ?? ''), 0, 160);
+   216	        $allProducts = $controller->getProductsByCategory(0, $locale);
+   217	        render('product/card', [
+   218	            'product' => $product,
+   219	            'configurableProducts' => filter_configurable_products($allProducts),
+   220	            'pageTitle' => $product['name'] . ' — Quattro',
+   221	            'pageDescription' => $description,
+   222	            'bodyClass' => 'page-product',
+   223	            'extraCss' => ['/public/css/configurator.css'],
+   224	            'extraJs' => ['/public/js/configurator.js'],
+   225	        ]);
+   226	        exit;
+   227	    }
+   228	
+   229	    // ---- GET /api/product/{id} — JSON для AJAX -------------------
+   230	    if ($section === 'api' && $param === 'product' && $requestMethod === 'GET') {
+   231	        $productId  = (int)$subParam;
+   232	        $controller = new App\Controllers\ProductController();
+   233	        $controller->apiGetProduct($productId);
+   234	        exit;
+   235	    }
+   236	
+   237	    // ---- GET /api/csrf-token — выдача CSRF-токена ----------------
+   238	    if ($section === 'api' && $param === 'csrf-token' && $requestMethod === 'GET') {
+   239	        header('Content-Type: application/json; charset=utf-8');
+   240	        $controller = new App\Controllers\OrderController();
+   241	        $token      = $controller->generateCsrfToken();
+   242	        echo json_encode(['token' => $token], JSON_UNESCAPED_UNICODE);
+   243	        exit;
+   244	    }
+   245	
+   246	    // ---- POST /api/order/create — создание заказа ----------------
+   247	    if ($section === 'api' && $param === 'order' && $subParam === 'create'
+   248	        && $requestMethod === 'POST') {
+   249	        $controller = new App\Controllers\OrderController();
+   250	        $controller->createOrder();
+   251	        exit;
+   252	    }
+   253	
+   254	    // ---- POST /api/lead/create — заявка на КП --------------------
+   255	    if ($section === 'api' && $param === 'lead' && $subParam === 'create'
+   256	        && $requestMethod === 'POST') {
+   257	        $controller = new App\Controllers\LeadController();
+   258	        $controller->createLead();
+   259	        exit;
+   260	    }
+   261	
+   262	    // ---- GET /order/success/{orderId} — страница «Заказ принят» --
+   263	    if ($section === 'order' && $param === 'success' && $requestMethod === 'GET') {
+   264	        $orderId    = (int)$subParam;
+   265	        $controller = new App\Controllers\OrderController();
+   266	        $controller->showSuccess($orderId);
+   267	        exit;
+   268	    }
+   269	
+   270	    // ---- GET /privacy — политика конфиденциальности ------------
+   271	    if ($section === 'privacy' && $requestMethod === 'GET') {
+   272	        render('pages/privacy', [
+   273	            'pageTitle' => 'Политика конфиденциальности — Quattro',
+   274	            'pageDescription' => 'Как Quattro обрабатывает персональные данные в формах заявки и заказа.',
+   275	            'bodyClass' => 'page-privacy',
+   276	        ]);
+   277	        exit;
+   278	    }
+   279	
+   280	    // ---- GET /cart — корзина ------------------------------------
+   281	    if ($section === 'cart' && $requestMethod === 'GET') {
+   282	        render('cart', [
+   283	            'pageTitle' => 'Корзина — Quattro',
+   284	            'pageDescription' => 'Оформление заказа через конфигуратор Quattro.',
+   285	            'bodyClass' => 'page-cart',
+   286	        ]);
+   287	        exit;
+   288	    }
+   289	
+   290	    // ---- 404 — ничего не совпало --------------------------------
+   291	    http_response_code(404);
+   292	    render('errors/404', ['pageTitle' => '404 — Страница не найдена']);
+   293	
+   294	} catch (Throwable $e) {
+   295	    // Глобальный обработчик непойманных исключений
+   296	    // В debug-режиме показываем детали, в production — только общее сообщение
+   297	    if ($config['app']['debug']) {
+   298	        http_response_code(500);
+   299	        echo '<pre style="background:#1a1d27;color:#ef4444;padding:20px;font-family:monospace;">';
+   300	        echo '<strong>Ошибка:</strong> ' . htmlspecialchars($e->getMessage()) . "\n\n";
+   301	        echo '<strong>Файл:</strong> '   . htmlspecialchars($e->getFile()) . ':' . $e->getLine() . "\n\n";
+   302	        echo '<strong>Трассировка:</strong>' . "\n" . htmlspecialchars($e->getTraceAsString());
+   303	        echo '</pre>';
+   304	    } else {
+   305	        // Логируем в файл (не показываем детали пользователю)
+   306	        error_log('[' . date('Y-m-d H:i:s') . '] ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+   307	        http_response_code(500);
+   308	        render('errors/500', ['pageTitle' => '500 — Ошибка сервера']);
+   309	    }
+   310	}
+
+
+################################################################
+# ФАЙЛ: router.php
+################################################################
+
+     1	<?php
+     2	/**
+     3	 * router.php — точка входа для встроенного сервера PHP (php -S).
+     4	 * Эмулирует mod_rewrite: статика отдаётся как есть, остальное → index.php.
+     5	 */
+     6	declare(strict_types=1);
+     7	
+     8	$uri = urldecode(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?? '/');
+     9	
+    10	if ($uri !== '/' && is_file(__DIR__ . $uri)) {
+    11	    return false;
+    12	}
+    13	
+    14	require __DIR__ . '/index.php';
+
+
+################################################################
+# ФАЙЛ: .htaccess
+################################################################
+
+     1	# =============================================================
+     2	# .htaccess — Конфигурация Apache для веб-платформы
+     3	# Расположение: корень проекта (рядом с index.php)
+     4	# =============================================================
+     5	
+     6	# Требуем Apache mod_rewrite
+     7	Options -Indexes
+     8	Options -MultiViews
+     9	
+    10	# ------------------------------------------------------------------
+    11	# ВКЛЮЧАЕМ MOD_REWRITE (перенаправление всех URL на index.php)
+    12	# ------------------------------------------------------------------
+    13	<IfModule mod_rewrite.c>
+    14	    RewriteEngine On
+    15	
+    16	    # Базовый путь — если сайт в подпапке (например /furniture_platform/),
+    17	    # раскомментируй и укажи путь:
+    18	    # RewriteBase /furniture_platform/
+    19	
+    20	    # Не перенаправляем запросы к реально существующим файлам
+    21	    # (CSS, JS, изображения, шрифты)
+    22	    RewriteCond %{REQUEST_FILENAME} !-f
+    23	    RewriteCond %{REQUEST_FILENAME} !-d
+    24	
+    25	    # Все остальные запросы → index.php (Front Controller)
+    26	    RewriteRule ^ index.php [L,QSA]
+    27	</IfModule>
+    28	
+    29	
+    30	# ------------------------------------------------------------------
+    31	# ЗАЩИТА ЧУВСТВИТЕЛЬНЫХ ФАЙЛОВ И ПАПОК
+    32	# Прямой доступ из браузера к этим путям запрещён.
+    33	# ------------------------------------------------------------------
+    34	
+    35	# Запрет доступа к конфигурационным файлам PHP
+    36	<FilesMatch "^(config\.php|Database\.php)$">
+    37	    <IfModule mod_authz_core.c>
+    38	        Require all denied
+    39	    </IfModule>
+    40	    <IfModule !mod_authz_core.c>
+    41	        Order deny,allow
+    42	        Deny from all
+    43	    </IfModule>
+    44	</FilesMatch>
+    45	
+    46	# Запрет доступа к папке config напрямую
+    47	<IfModule mod_rewrite.c>
+    48	    RewriteRule ^config/.*$ - [F,L]
+    49	    RewriteRule ^controllers/.*$ - [F,L]
+    50	    RewriteRule ^models/.*$ - [F,L]
+    51	    RewriteRule ^views/.*$ - [F,L]
+    52	    RewriteRule ^sql/.*$ - [F,L]
+    53	</IfModule>
+    54	
+    55	# Запрет доступа к .env, .git и другим служебным файлам
+    56	<FilesMatch "^\.">
+    57	    <IfModule mod_authz_core.c>
+    58	        Require all denied
+    59	    </IfModule>
+    60	</FilesMatch>
+    61	
+    62	# Запрет доступа к SQL-файлам
+    63	<FilesMatch "\.sql$">
+    64	    <IfModule mod_authz_core.c>
+    65	        Require all denied
+    66	    </IfModule>
+    67	</FilesMatch>
+    68	
+    69	# Запрет доступа к PHP-файлам в public/ (там только CSS/JS/изображения)
+    70	<IfModule mod_rewrite.c>
+    71	    RewriteRule ^public/.*\.php$ - [F,L]
+    72	</IfModule>
+    73	
+    74	
+    75	# ------------------------------------------------------------------
+    76	# ЗАГОЛОВКИ БЕЗОПАСНОСТИ HTTP
+    77	# (дублируют то, что устанавливается в PHP — как резервный уровень)
+    78	# ------------------------------------------------------------------
+    79	<IfModule mod_headers.c>
+    80	    Header always set X-Frame-Options "DENY"
+    81	    Header always set X-Content-Type-Options "nosniff"
+    82	    Header always set Referrer-Policy "same-origin"
+    83	    Header always set Permissions-Policy "geolocation=(), microphone=(), camera=()"
+    84	
+    85	    # Убираем заголовок Server (скрываем версию Apache)
+    86	    Header always unset Server
+    87	    Header always unset X-Powered-By
+    88	</IfModule>
+    89	
+    90	# Скрываем версию PHP
+    91	<IfModule mod_php.c>
+    92	    php_flag expose_php Off
+    93	</IfModule>
+    94	
+    95	
+    96	# ------------------------------------------------------------------
+    97	# СЖАТИЕ GZIP (ускорение загрузки)
+    98	# ------------------------------------------------------------------
+    99	<IfModule mod_deflate.c>
+   100	    AddOutputFilterByType DEFLATE text/html
+   101	    AddOutputFilterByType DEFLATE text/css
+   102	    AddOutputFilterByType DEFLATE text/javascript
+   103	    AddOutputFilterByType DEFLATE application/javascript
+   104	    AddOutputFilterByType DEFLATE application/json
+   105	    AddOutputFilterByType DEFLATE image/svg+xml
+   106	    AddOutputFilterByType DEFLATE font/woff2
+   107	</IfModule>
+   108	
+   109	
+   110	# ------------------------------------------------------------------
+   111	# КЕШИРОВАНИЕ СТАТИЧЕСКИХ РЕСУРСОВ (оптимизация Core Web Vitals)
+   112	# ------------------------------------------------------------------
+   113	<IfModule mod_expires.c>
+   114	    ExpiresActive On
+   115	
+   116	    # Изображения — 1 месяц
+   117	    ExpiresByType image/webp   "access plus 1 month"
+   118	    ExpiresByType image/jpeg   "access plus 1 month"
+   119	    ExpiresByType image/png    "access plus 1 month"
+   120	    ExpiresByType image/svg+xml "access plus 1 month"
+   121	    ExpiresByType image/x-icon "access plus 1 year"
+   122	
+   123	    # CSS и JS — 1 неделя
+   124	    # (при обновлении файлов добавляй версию: style.css?v=2)
+   125	    ExpiresByType text/css                "access plus 1 week"
+   126	    ExpiresByType application/javascript  "access plus 1 week"
+   127	
+   128	    # Шрифты — 1 год (не меняются)
+   129	    ExpiresByType font/woff2 "access plus 1 year"
+   130	    ExpiresByType font/woff  "access plus 1 year"
+   131	
+   132	    # HTML — не кешируем (всегда свежий)
+   133	    ExpiresByType text/html "access plus 0 seconds"
+   134	</IfModule>
+   135	
+   136	
+   137	# ------------------------------------------------------------------
+   138	# КОДИРОВКА ПО УМОЛЧАНИЮ
+   139	# ------------------------------------------------------------------
+   140	AddDefaultCharset UTF-8
+   141	
+   142	
+   143	# ------------------------------------------------------------------
+   144	# HTTPS-РЕДИРЕКТ (раскомментируй на production-сервере с SSL)
+   145	# ------------------------------------------------------------------
+   146	# <IfModule mod_rewrite.c>
+   147	#     RewriteCond %{HTTPS} off
+   148	#     RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+   149	# </IfModule>
+
+
+################################################################
+# ФАЙЛ: config/config.php
+################################################################
+
+     1	<?php
+     2	/**
+     3	 * config.php — Централизованная конфигурация платформы
+     4	 *
+     5	 * ВАЖНО: Этот файл должен быть исключён из системы контроля версий (.gitignore).
+     6	 * В production-среде рекомендуется читать значения из переменных окружения ($_ENV).
+     7	 */
+     8	
+     9	declare(strict_types=1);
+    10	
+    11	return [
+    12	
+    13	    // ------------------------------------------------------------------
+    14	    // Настройки подключения к базе данных
+    15	    // ------------------------------------------------------------------
+    16	    'database' => [
+    17	        'host'     => getenv('DB_HOST')     ?: 'localhost',
+    18	        'port'     => (int)(getenv('DB_PORT') ?: 3306),
+    19	        'name'     => getenv('DB_NAME')     ?: 'furniture_platform',
+    20	        // XAMPP / локально: root без пароля. Docker/production: DB_USER / DB_PASSWORD.
+    21	        'user'     => getenv('DB_USER') !== false && getenv('DB_USER') !== '' ? getenv('DB_USER') : 'root',
+    22	        'password' => getenv('DB_PASSWORD') !== false ? getenv('DB_PASSWORD') : '',
+    23	    ],
+    24	
+    25	    // ------------------------------------------------------------------
+    26	    // Настройки сессий
+    27	    // ------------------------------------------------------------------
+    28	    'session' => [
+    29	        // Время жизни сессионного cookie (секунды): 0 = до закрытия браузера
+    30	        'lifetime'  => 0,
+    31	        // Передавать cookie только по HTTPS (для localhost: SESSION_SECURE=false)
+    32	        // На http://localhost cookie с Secure не сохранится — для XAMPP по умолчанию false.
+    33	        'secure'    => filter_var(getenv('SESSION_SECURE') ?: 'false', FILTER_VALIDATE_BOOLEAN),
+    34	        // Запретить доступ к cookie из JavaScript (защита от XSS-кражи сессии)
+    35	        'httponly'  => true,
+    36	        // Строгая политика SameSite — защита от CSRF
+    37	        'samesite'  => 'Strict',
+    38	    ],
+    39	
+    40	    // ------------------------------------------------------------------
+    41	    // Настройки приложения
+    42	    // ------------------------------------------------------------------
+    43	    'app' => [
+    44	        'name'     => 'Furniture Platform',
+    45	        'base_url' => getenv('APP_URL') ?: 'https://your-domain.kz',
+    46	        'debug'    => filter_var(getenv('APP_DEBUG') ?: 'false', FILTER_VALIDATE_BOOLEAN),
+    47	        // Поддерживаемые языки интерфейса
+    48	        'locales'  => ['ru', 'kk'],
+    49	        'default_locale' => 'ru',
+    50	    ],
+    51	
+    52	    // ------------------------------------------------------------------
+    53	    // Настройки безопасности
+    54	    // ------------------------------------------------------------------
+    55	    'security' => [
+    56	        // bcrypt cost factor — минимально допустимое значение по требованиям ИБ
+    57	        'bcrypt_cost'        => 12,
+    58	        // Максимальное число неудачных попыток входа до временной блокировки
+    59	        'login_attempts_max' => 5,
+    60	        // Время блокировки аккаунта после превышения попыток (секунды)
+    61	        'lockout_duration'   => 900,
+    62	    ],
+    63	];
+
+
+################################################################
+# ФАЙЛ: config/Database.php
+################################################################
+
+     1	<?php
+     2	/**
+     3	 * Database.php — Singleton-обёртка над PDO
+     4	 *
+     5	 * Принципы безопасности:
+     6	 *  - Учётные данные хранятся в конфиге, а не в коде
+     7	 *  - PDO::ERRMODE_EXCEPTION — все ошибки превращаются в исключения
+     8	 *  - PDO::ATTR_EMULATE_PREPARES = false — нативные prepared statements
+     9	 *    (исключает возможность SQL-инъекции через эмуляцию на уровне PDO)
+    10	 *  - PDO::ATTR_DEFAULT_FETCH_MODE = FETCH_ASSOC — удобный формат по умолчанию
+    11	 */
+    12	
+    13	declare(strict_types=1);
+    14	
+    15	namespace App\Config;
+    16	
+    17	use PDO;
+    18	use PDOException;
+    19	use RuntimeException;
+    20	
+    21	final class Database
+    22	{
+    23	    private static ?PDO $instance = null;
+    24	
+    25	    /**
+    26	     * Запрещаем прямое создание экземпляров — только через getInstance().
+    27	     */
+    28	    private function __construct() {}
+    29	    private function __clone() {}
+    30	
+    31	    /**
+    32	     * Возвращает единственный экземпляр PDO-соединения (паттерн Singleton).
+    33	     * При первом вызове создаёт соединение, при последующих — возвращает кешированное.
+    34	     *
+    35	     * @throws RuntimeException если соединение не удалось установить
+    36	     */
+    37	    public static function getInstance(): PDO
+    38	    {
+    39	        if (self::$instance === null) {
+    40	            $config = require __DIR__ . '/config.php';
+    41	            $db     = $config['database'];
+    42	
+    43	            $dsn = sprintf(
+    44	                'mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4',
+    45	                $db['host'],
+    46	                $db['port'],
+    47	                $db['name']
+    48	            );
+    49	
+    50	            $options = [
+    51	                PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+    52	                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+    53	                // ОБЯЗАТЕЛЬНО false — иначе PDO эмулирует prepared statements
+    54	                // через конкатенацию строк, сводя защиту от SQLi к нулю
+    55	                PDO::ATTR_EMULATE_PREPARES   => false,
+    56	                // Устанавливаем кодировку на уровне соединения
+    57	                (defined('Pdo\Mysql::ATTR_INIT_COMMAND')
+    58	                    ? \Pdo\Mysql::ATTR_INIT_COMMAND
+    59	                    : PDO::MYSQL_ATTR_INIT_COMMAND) => "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci",
+    60	            ];
+    61	
+    62	            try {
+    63	                self::$instance = new PDO($dsn, $db['user'], $db['password'], $options);
+    64	            } catch (PDOException $e) {
+    65	                // Намеренно НЕ включаем оригинальное сообщение в публичный ответ —
+    66	                // оно может содержать учётные данные или детали схемы.
+    67	                throw new RuntimeException(
+    68	                    'Ошибка подключения к базе данных. Обратитесь к администратору.',
+    69	                    500,
+    70	                    $e
+    71	                );
+    72	            }
+    73	        }
+    74	
+    75	        return self::$instance;
+    76	    }
+    77	}
+
+
+################################################################
+# ФАЙЛ: includes/view.php
+################################################################
+
+     1	<?php
+     2	
+     3	declare(strict_types=1);
+     4	
+     5	require_once __DIR__ . '/../views/helpers.php';
+     6	
+     7	/**
+     8	 * Рендерит view через общий layout.
+     9	 *
+    10	 * @param string $view Путь к шаблону относительно views/, без расширения
+    11	 * @param array<string,mixed> $data Данные для шаблона
+    12	 * @param array<string,mixed> $layout Дополнительные параметры layout
+    13	 */
+    14	function render(string $view, array $data = [], array $layout = []): void
+    15	{
+    16	    $viewFile = __DIR__ . '/../views/' . ltrim($view, '/\\') . '.php';
+    17	
+    18	    if (!file_exists($viewFile)) {
+    19	        throw new RuntimeException('View not found: ' . $viewFile);
+    20	    }
+    21	
+    22	    extract($data, EXTR_SKIP);
+    23	
+    24	    $pageTitle       = $layout['pageTitle'] ?? $data['pageTitle'] ?? 'Quattro';
+    25	    $pageDescription = $layout['pageDescription'] ?? $data['pageDescription'] ?? 'Quattro — стильная домашняя мебель с онлайн-конфигуратором.';
+    26	    $bodyClass       = $layout['bodyClass'] ?? $data['bodyClass'] ?? '';
+    27	    $extraCss        = $layout['extraCss'] ?? $data['extraCss'] ?? [];
+    28	    $extraJs         = $layout['extraJs'] ?? $data['extraJs'] ?? [];
+    29	
+    30	    ob_start();
+    31	    require $viewFile;
+    32	    $content = ob_get_clean();
+    33	
+    34	    require __DIR__ . '/../views/layouts/main.php';
+    35	}
+
+
+################################################################
+# ФАЙЛ: controllers/ProductController.php
+################################################################
+
+     1	<?php
+     2	/**
+     3	 * ProductController.php
+     4	 *
+     5	 * Отвечает за:
+     6	 *  - Получение списка товаров с их конфигурационными опциями
+     7	 *  - Получение детальной информации об одном товаре
+     8	 *
+     9	 * Паттерн MVC: Controller вызывает методы Model и передаёт
+    10	 * результат в View. Бизнес-логика выборки инкапсулирована здесь;
+    11	 * SQL-запросы изолированы в методах данного класса.
+    12	 */
+    13	
+    14	declare(strict_types=1);
+    15	
+    16	namespace App\Controllers;
+    17	
+    18	use App\Config\Database;
+    19	use PDO;
+    20	
+    21	class ProductController
+    22	{
+    23	    private PDO $db;
+    24	
+    25	    public function __construct()
+    26	    {
+    27	        $this->db = Database::getInstance();
+    28	    }
+    29	
+    30	    // ------------------------------------------------------------------
+    31	    // Публичные методы (точки входа из маршрутизатора)
+    32	    // ------------------------------------------------------------------
+    33	
+    34	    /**
+    35	     * Возвращает список категорий для хаба каталога.
+    36	     *
+    37	     * @return array<int, array<string, mixed>>
+    38	     */
+    39	    public function getCategories(string $locale = 'ru'): array
+    40	    {
+    41	        $locale  = in_array($locale, ['ru', 'kk'], true) ? $locale : 'ru';
+    42	        $nameCol = "name_{$locale}";
+    43	
+    44	        $sql = "
+    45	            SELECT
+    46	                c.id,
+    47	                c.{$nameCol} AS name,
+    48	                c.slug,
+    49	                (
+    50	                    SELECT COUNT(*)
+    51	                    FROM products p
+    52	                    WHERE p.category_id = c.id
+    53	                      AND p.active = 1
+    54	                ) AS product_count
+    55	            FROM categories c
+    56	            ORDER BY c.id ASC
+    57	        ";
+    58	
+    59	        $stmt = $this->db->query($sql);
+    60	
+    61	        return $stmt->fetchAll();
+    62	    }
+    63	
+    64	    /**
+    65	     * Возвращает одну категорию по ID или null, если не найдена.
+    66	     *
+    67	     * @return array<string, mixed>|null
+    68	     */
+    69	    public function getCategoryById(int $categoryId, string $locale = 'ru'): ?array
+    70	    {
+    71	        if ($categoryId <= 0) {
+    72	            return null;
+    73	        }
+    74	
+    75	        $locale  = in_array($locale, ['ru', 'kk'], true) ? $locale : 'ru';
+    76	        $nameCol = "name_{$locale}";
+    77	
+    78	        $sql = "
+    79	            SELECT
+    80	                c.id,
+    81	                c.{$nameCol} AS name,
+    82	                c.slug
+    83	            FROM categories c
+    84	            WHERE c.id = :category_id
+    85	            LIMIT 1
+    86	        ";
+    87	
+    88	        $stmt = $this->db->prepare($sql);
+    89	        $stmt->execute([':category_id' => $categoryId]);
+    90	        $category = $stmt->fetch();
+    91	
+    92	        return $category === false ? null : $category;
+    93	    }
+    94	
+    95	    /**
+    96	     * Возвращает список активных товаров заданной категории
+    97	     * вместе с их конфигурационными опциями.
+    98	     *
+    99	     * Метод реализует «жадную загрузку» (eager loading) опций:
+   100	     * сначала загружаются товары, затем одним запросом — все их опции,
+   101	     * после чего происходит сборка результата в PHP.
+   102	     * Это позволяет избежать проблемы N+1 запросов.
+   103	     *
+   104	     * @param int $categoryId  ID категории (0 = все категории)
+   105	     * @param string $locale   Языковой код ('ru' или 'kk')
+   106	     * @return array           Массив товаров с вложенными опциями
+   107	     */
+   108	    public function getProductsByCategory(int $categoryId = 0, string $locale = 'ru'): array
+   109	    {
+   110	        // Валидация локали — только допустимые значения
+   111	        $locale = in_array($locale, ['ru', 'kk'], true) ? $locale : 'ru';
+   112	
+   113	        // Динамически подставляем суффикс языка в имена столбцов.
+   114	        // Имена столбцов нельзя параметризовать через PDO (только значения),
+   115	        // поэтому используем whitelist-подход: допустимое значение уже проверено выше.
+   116	        $nameCol = "p.name_{$locale}";
+   117	        $descCol = "p.description_{$locale}";
+   118	
+   119	        // --- Запрос 1: Выборка товаров ---
+   120	        $sql = "
+   121	            SELECT
+   122	                p.id,
+   123	                p.category_id,
+   124	                {$nameCol}        AS name,
+   125	                {$descCol}        AS description,
+   126	                p.base_price,
+   127	                p.image_preview,
+   128	                p.sku,
+   129	                p.slug,
+   130	                c.name_{$locale}  AS category_name
+   131	            FROM products p
+   132	            INNER JOIN categories c ON c.id = p.category_id
+   133	            WHERE p.active = 1
+   134	        ";
+   135	
+   136	        $params = [];
+   137	
+   138	        if ($categoryId > 0) {
+   139	            $sql      .= ' AND p.category_id = :category_id';
+   140	            $params[':category_id'] = $categoryId;
+   141	        }
+   142	
+   143	        $sql .= ' ORDER BY p.id ASC';
+   144	
+   145	        $stmt = $this->db->prepare($sql);
+   146	        $stmt->execute($params);
+   147	        $products = $stmt->fetchAll();
+   148	
+   149	        if (empty($products)) {
+   150	            return [];
+   151	        }
+   152	
+   153	        // --- Запрос 2: Все опции для найденных товаров одним запросом ---
+   154	        // Собираем массив ID товаров для IN-клаузы
+   155	        $productIds    = array_column($products, 'id');
+   156	        $placeholders  = implode(',', array_fill(0, count($productIds), '?'));
+   157	
+   158	        $optSql = "
+   159	            SELECT
+   160	                po.id,
+   161	                po.product_id,
+   162	                po.option_name_{$locale}  AS option_name,
+   163	                po.option_type,
+   164	                po.option_value_{$locale} AS option_value,
+   165	                po.option_group,
+   166	                po.price_modifier,
+   167	                po.sort_order
+   168	            FROM product_options po
+   169	            WHERE po.product_id IN ({$placeholders})
+   170	            ORDER BY po.product_id ASC, po.sort_order ASC
+   171	        ";
+   172	
+   173	        $optStmt = $this->db->prepare($optSql);
+   174	        // Передаём массив ID как последовательные позиционные параметры
+   175	        $optStmt->execute($productIds);
+   176	        $allOptions = $optStmt->fetchAll();
+   177	
+   178	        // --- Сборка: группируем опции по product_id ---
+   179	        $optionsByProduct = [];
+   180	        foreach ($allOptions as $option) {
+   181	            $pid = (int)$option['product_id'];
+   182	            $optionsByProduct[$pid][] = $option;
+   183	        }
+   184	
+   185	        // Присоединяем опции к товарам
+   186	        foreach ($products as &$product) {
+   187	            $pid             = (int)$product['id'];
+   188	            $product['options'] = $optionsByProduct[$pid] ?? [];
+   189	            // Приводим base_price к float для корректной JSON-сериализации
+   190	            $product['base_price'] = (float)$product['base_price'];
+   191	        }
+   192	        unset($product);
+   193	
+   194	        return $products;
+   195	    }
+   196	
+   197	    /**
+   198	     * Возвращает детальные данные одного товара по его ID,
+   199	     * включая все конфигурационные опции.
+   200	     *
+   201	     * @param int    $productId  ID товара
+   202	     * @param string $locale     Языковой код
+   203	     * @return array|null        Данные товара или null если не найден/скрыт
+   204	     */
+   205	    public function getProductById(int $productId, string $locale = 'ru'): ?array
+   206	    {
+   207	        $locale  = in_array($locale, ['ru', 'kk'], true) ? $locale : 'ru';
+   208	
+   209	        $nameCol = "p.name_{$locale}";
+   210	        $descCol = "p.description_{$locale}";
+   211	
+   212	        $sql = "
+   213	            SELECT
+   214	                p.id,
+   215	                {$nameCol}        AS name,
+   216	                {$descCol}        AS description,
+   217	                p.base_price,
+   218	                p.image_preview,
+   219	                p.sku,
+   220	                p.slug,
+   221	                p.category_id,
+   222	                c.name_{$locale}  AS category_name,
+   223	                c.slug            AS category_slug
+   224	            FROM products p
+   225	            INNER JOIN categories c ON c.id = p.category_id
+   226	            WHERE p.id = :product_id
+   227	              AND p.active = 1
+   228	            LIMIT 1
+   229	        ";
+   230	
+   231	        $stmt = $this->db->prepare($sql);
+   232	        $stmt->execute([':product_id' => $productId]);
+   233	        $product = $stmt->fetch();
+   234	
+   235	        if ($product === false) {
+   236	            return null;
+   237	        }
+   238	
+   239	        return $this->attachProductOptions($product, $locale);
+   240	    }
+   241	
+   242	    /**
+   243	     * Товар по URL-slug (для ссылок вида /product/bedroom-set-1).
+   244	     *
+   245	     * @return array<string, mixed>|null
+   246	     */
+   247	    public function getProductBySlug(string $slug, string $locale = 'ru'): ?array
+   248	    {
+   249	        $slug = trim($slug);
+   250	
+   251	        if ($slug === '') {
+   252	            return null;
+   253	        }
+   254	
+   255	        $locale  = in_array($locale, ['ru', 'kk'], true) ? $locale : 'ru';
+   256	        $nameCol = "p.name_{$locale}";
+   257	        $descCol = "p.description_{$locale}";
+   258	
+   259	        $sql = "
+   260	            SELECT
+   261	                p.id,
+   262	                {$nameCol}        AS name,
+   263	                {$descCol}        AS description,
+   264	                p.base_price,
+   265	                p.image_preview,
+   266	                p.sku,
+   267	                p.slug,
+   268	                p.category_id,
+   269	                c.name_{$locale}  AS category_name,
+   270	                c.slug            AS category_slug
+   271	            FROM products p
+   272	            INNER JOIN categories c ON c.id = p.category_id
+   273	            WHERE p.slug = :slug
+   274	              AND p.active = 1
+   275	            LIMIT 1
+   276	        ";
+   277	
+   278	        $stmt = $this->db->prepare($sql);
+   279	        $stmt->execute([':slug' => $slug]);
+   280	        $product = $stmt->fetch();
+   281	
+   282	        if ($product === false) {
+   283	            return null;
+   284	        }
+   285	
+   286	        return $this->attachProductOptions($product, $locale);
+   287	    }
+   288	
+   289	    /**
+   290	     * @param array<string, mixed> $product
+   291	     * @return array<string, mixed>
+   292	     */
+   293	    private function attachProductOptions(array $product, string $locale): array
+   294	    {
+   295	        $productId = (int)$product['id'];
+   296	
+   297	        // Загружаем опции этого товара
+   298	        $optSql = "
+   299	            SELECT
+   300	                id,
+   301	                option_name_{$locale}   AS option_name,
+   302	                option_type,
+   303	                option_value_{$locale}  AS option_value,
+   304	                option_group,
+   305	                price_modifier,
+   306	                sort_order
+   307	            FROM product_options
+   308	            WHERE product_id = :product_id
+   309	            ORDER BY sort_order ASC
+   310	        ";
+   311	
+   312	        $optStmt = $this->db->prepare($optSql);
+   313	        $optStmt->execute([':product_id' => $productId]);
+   314	
+   315	        $product['options']    = $optStmt->fetchAll();
+   316	        $product['base_price'] = (float)$product['base_price'];
+   317	
+   318	        return $product;
+   319	    }
+   320	
+   321	    /**
+   322	     * Точка входа для AJAX-запроса: возвращает JSON-ответ с данными товара.
+   323	     * Вызывается из маршрутизатора при GET /api/product/{id}
+   324	     *
+   325	     * @param int $productId
+   326	     * @return void  Выводит JSON напрямую
+   327	     */
+   328	    public function apiGetProduct(int $productId): void
+   329	    {
+   330	        header('Content-Type: application/json; charset=utf-8');
+   331	
+   332	        $locale  = $_GET['locale'] ?? 'ru';
+   333	        $product = $this->getProductById($productId, $locale);
+   334	
+   335	        if ($product === null) {
+   336	            http_response_code(404);
+   337	            echo json_encode(['error' => 'Товар не найден'], JSON_UNESCAPED_UNICODE);
+   338	            return;
+   339	        }
+   340	
+   341	        echo json_encode($product, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+   342	    }
+   343	}
+
+
+################################################################
+# ФАЙЛ: controllers/OrderController.php
+################################################################
+
+     1	<?php
+     2	/**
+     3	 * OrderController.php
+     4	 *
+     5	 * Отвечает за:
+     6	 *  - Приём JSON-запроса на создание заказа от frontend-конфигуратора
+     7	 *  - Валидацию входящих данных (типы, диапазоны, наличие обязательных полей)
+     8	 *  - Расчёт итоговой стоимости с учётом выбранных опций (price_modifier)
+     9	 *  - Защиту от CSRF через сессионный синхронизирующий токен
+    10	 *  - XSS-экранирование пользовательского ввода перед записью в БД
+    11	 *  - Запись заказа в таблицы orders и order_items в одной транзакции
+    12	 *
+    13	 * Безопасность:
+    14	 *  - PDO prepared statements → защита от SQL-инъекций
+    15	 *  - CSRF-токен в сессии → защита от межсайтовой подделки запросов
+    16	 *  - htmlspecialchars() на все строки от пользователя → защита от XSS
+    17	 *  - Валидация типов: intval/floatval/filter_var → защита от type juggling
+    18	 *  - Транзакция InnoDB → гарантия ACID при ошибке на полпути
+    19	 */
+    20	
+    21	declare(strict_types=1);
+    22	
+    23	namespace App\Controllers;
+    24	
+    25	use App\Config\Database;
+    26	use PDO;
+    27	use PDOException;
+    28	use InvalidArgumentException;
+    29	use RuntimeException;
+    30	
+    31	class OrderController
+    32	{
+    33	    private PDO $db;
+    34	
+    35	    // Максимально допустимое количество позиций в одном заказе
+    36	    private const MAX_ITEMS = 50;
+    37	
+    38	    // Допустимое количество единиц одной позиции
+    39	    private const MAX_QTY   = 100;
+    40	
+    41	    public function __construct()
+    42	    {
+    43	        $this->db = Database::getInstance();
+    44	        $this->startSecureSession();
+    45	    }
+    46	
+    47	    // ==================================================================
+    48	    // CSRF-ЗАЩИТА
+    49	    // ==================================================================
+    50	
+    51	    /**
+    52	     * Инициализирует PHP-сессию с безопасными параметрами cookie.
+    53	     * Должна вызываться до любой работы с сессией.
+    54	     */
+    55	    private function startSecureSession(): void
+    56	    {
+    57	        if (session_status() === PHP_SESSION_NONE) {
+    58	            $config = require __DIR__ . '/../config/config.php';
+    59	            $sess   = $config['session'];
+    60	
+    61	            session_set_cookie_params([
+    62	                'lifetime' => $sess['lifetime'],
+    63	                'path'     => '/',
+    64	                'domain'   => '',
+    65	                'secure'   => $sess['secure'],    // только HTTPS
+    66	                'httponly' => $sess['httponly'],   // недоступно из JS
+    67	                'samesite' => $sess['samesite'],   // защита от CSRF
+    68	            ]);
+    69	
+    70	            session_start();
+    71	        }
+    72	    }
+    73	
+    74	    /**
+    75	     * Генерирует криптографически стойкий CSRF-токен и сохраняет его
+    76	     * в сессии. Возвращает токен для встраивания в HTML-форму.
+    77	     *
+    78	     * @return string  32-байтный hex-токен
+    79	     */
+    80	    public function generateCsrfToken(): string
+    81	    {
+    82	        // random_bytes() — CSPRNG, безопаснее mt_rand() / uniqid()
+    83	        $token = bin2hex(random_bytes(32));
+    84	        $_SESSION['csrf_token'] = $token;
+    85	        return $token;
+    86	    }
+    87	
+    88	    /**
+    89	     * Проверяет CSRF-токен из запроса против значения в сессии.
+    90	     * Использует hash_equals() для защиты от timing-атак.
+    91	     *
+    92	     * @param string $tokenFromRequest  Токен, переданный клиентом
+    93	     * @throws RuntimeException         Если токен невалиден или отсутствует
+    94	     */
+    95	    private function validateCsrfToken(string $tokenFromRequest): void
+    96	    {
+    97	        $sessionToken = $_SESSION['csrf_token'] ?? '';
+    98	
+    99	        if (
+   100	            empty($sessionToken) ||
+   101	            !hash_equals($sessionToken, $tokenFromRequest)
+   102	        ) {
+   103	            throw new RuntimeException('Недействительный CSRF-токен.', 403);
+   104	        }
+   105	
+   106	        // Токен одноразовый: инвалидируем после успешной проверки,
+   107	        // чтобы повторная отправка той же формы не прошла проверку.
+   108	        unset($_SESSION['csrf_token']);
+   109	    }
+   110	
+   111	    // ==================================================================
+   112	    // ТОЧКИ ВХОДА (вызываются из маршрутизатора)
+   113	    // ==================================================================
+   114	
+   115	    /**
+   116	     * POST /api/order/create
+   117	     *
+   118	     * Принимает тело запроса в формате JSON:
+   119	     * {
+   120	     *   "csrf_token": "abc123...",
+   121	     *   "items": [
+   122	     *     {
+   123	     *       "product_id": 1,
+   124	     *       "quantity": 1,
+   125	     *       "selected_options": [3, 7, 9]   // массив ID выбранных опций
+   126	     *     }
+   127	     *   ],
+   128	     *   "delivery": {
+   129	     *     "name":    "Иван Иванов",
+   130	     *     "phone":   "+77001234567",
+   131	     *     "city":    "Алматы",
+   132	     *     "address": "ул. Абая, 10, кв. 5",
+   133	     *     "comment": ""
+   134	     *   }
+   135	     * }
+   136	     *
+   137	     * Возвращает JSON:
+   138	     *   { "success": true, "order_id": 42, "total_price": 985000 }
+   139	     *   или
+   140	     *   { "success": false, "error": "Текст ошибки" }
+   141	     */
+   142	    public function createOrder(): void
+   143	    {
+   144	        header('Content-Type: application/json; charset=utf-8');
+   145	
+   146	        // Разрешаем только POST-запросы
+   147	        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+   148	            http_response_code(405);
+   149	            echo json_encode(['success' => false, 'error' => 'Метод не разрешён.'],
+   150	                             JSON_UNESCAPED_UNICODE);
+   151	            return;
+   152	        }
+   153	
+   154	        try {
+   155	            // --- 1. Чтение и первичный разбор JSON-тела запроса ---
+   156	            $rawBody = file_get_contents('php://input');
+   157	            $data    = json_decode($rawBody, true);
+   158	
+   159	            if (json_last_error() !== JSON_ERROR_NONE || !is_array($data)) {
+   160	                throw new InvalidArgumentException('Некорректный формат JSON в теле запроса.');
+   161	            }
+   162	
+   163	            // --- 2. Проверка CSRF-токена ---
+   164	            $csrfToken = $this->sanitizeString($data['csrf_token'] ?? '');
+   165	            $this->validateCsrfToken($csrfToken);
+   166	
+   167	            // --- 3. Валидация и санитизация входных данных ---
+   168	            $items    = $this->validateItems($data['items'] ?? []);
+   169	            $delivery = $this->validateDelivery($data['delivery'] ?? []);
+   170	
+   171	            // --- 4. Расчёт стоимости и запись в БД ---
+   172	            $orderId = $this->persistOrder($items, $delivery);
+   173	
+   174	            http_response_code(201);
+   175	            echo json_encode([
+   176	                'success'  => true,
+   177	                'order_id' => $orderId,
+   178	                'message'  => 'Ваш заказ успешно принят. Менеджер свяжется с вами в течение 30 минут.',
+   179	            ], JSON_UNESCAPED_UNICODE);
+   180	
+   181	        } catch (InvalidArgumentException $e) {
+   182	            http_response_code(422);
+   183	            echo json_encode(['success' => false, 'error' => $e->getMessage()],
+   184	                             JSON_UNESCAPED_UNICODE);
+   185	
+   186	        } catch (RuntimeException $e) {
+   187	            http_response_code($e->getCode() ?: 500);
+   188	            echo json_encode(['success' => false, 'error' => $e->getMessage()],
+   189	                             JSON_UNESCAPED_UNICODE);
+   190	
+   191	        } catch (\Throwable $e) {
+   192	            // Непредвиденная ошибка: логируем, но не раскрываем детали клиенту
+   193	            error_log('[OrderController] Unexpected error: ' . $e->getMessage());
+   194	            http_response_code(500);
+   195	            echo json_encode(['success' => false, 'error' => 'Внутренняя ошибка сервера.'],
+   196	                             JSON_UNESCAPED_UNICODE);
+   197	        }
+   198	    }
+   199	
+   200	    /**
+   201	     * GET /order/success/{id}
+   202	     * Отображает страницу подтверждения заказа.
+   203	     */
+   204	    public function showSuccess(int $orderId): void
+   205	    {
+   206	        require_once __DIR__ . '/../includes/view.php';
+   207	
+   208	        $order = $this->getOrderById($orderId);
+   209	
+   210	        if ($order === null) {
+   211	            http_response_code(404);
+   212	            render('errors/404', ['pageTitle' => '404 — Страница не найдена']);
+   213	            return;
+   214	        }
+   215	
+   216	        $order['delivery_info'] = json_decode($order['delivery_info'] ?? '{}', true) ?: [];
+   217	
+   218	        render('order/success', [
+   219	            'order' => $order,
+   220	            'pageTitle' => 'Заказ принят',
+   221	            'pageDescription' => 'Ваш заказ принят и обрабатывается.',
+   222	            'bodyClass' => 'page-order-success',
+   223	        ]);
+   224	    }
+   225	
+   226	    // ==================================================================
+   227	    // ВАЛИДАЦИЯ
+   228	    // ==================================================================
+   229	
+   230	    /**
+   231	     * Валидирует массив позиций заказа.
+   232	     * Каждая позиция: product_id (int > 0), quantity (int 1..MAX_QTY),
+   233	     *                 selected_options (array of int)
+   234	     *
+   235	     * @param mixed $rawItems
+   236	     * @return array  Валидированный массив позиций
+   237	     * @throws InvalidArgumentException
+   238	     */
+   239	    private function validateItems(mixed $rawItems): array
+   240	    {
+   241	        if (!is_array($rawItems) || empty($rawItems)) {
+   242	            throw new InvalidArgumentException('Корзина не может быть пустой.');
+   243	        }
+   244	
+   245	        if (count($rawItems) > self::MAX_ITEMS) {
+   246	            throw new InvalidArgumentException(
+   247	                sprintf('В заказе не может быть более %d позиций.', self::MAX_ITEMS)
+   248	            );
+   249	        }
+   250	
+   251	        $validated = [];
+   252	
+   253	        foreach ($rawItems as $index => $item) {
+   254	            if (!is_array($item)) {
+   255	                throw new InvalidArgumentException(
+   256	                    "Позиция #{$index}: некорректный формат данных."
+   257	                );
+   258	            }
+   259	
+   260	            // product_id — целое положительное число
+   261	            $productId = filter_var($item['product_id'] ?? 0,
+   262	                                    FILTER_VALIDATE_INT,
+   263	                                    ['options' => ['min_range' => 1]]);
+   264	            if ($productId === false) {
+   265	                throw new InvalidArgumentException(
+   266	                    "Позиция #{$index}: некорректный идентификатор товара."
+   267	                );
+   268	            }
+   269	
+   270	            // quantity — целое от 1 до MAX_QTY
+   271	            $quantity = filter_var($item['quantity'] ?? 1,
+   272	                                   FILTER_VALIDATE_INT,
+   273	                                   ['options' => ['min_range' => 1, 'max_range' => self::MAX_QTY]]);
+   274	            if ($quantity === false) {
+   275	                throw new InvalidArgumentException(
+   276	                    "Позиция #{$index}: некорректное количество."
+   277	                );
+   278	            }
+   279	
+   280	            // selected_options — массив целых чисел (может быть пустым)
+   281	            $rawOptions = $item['selected_options'] ?? [];
+   282	            if (!is_array($rawOptions)) {
+   283	                throw new InvalidArgumentException(
+   284	                    "Позиция #{$index}: опции должны быть переданы массивом."
+   285	                );
+   286	            }
+   287	
+   288	            $optionIds = [];
+   289	            foreach ($rawOptions as $optId) {
+   290	                $validated_opt = filter_var($optId,
+   291	                                            FILTER_VALIDATE_INT,
+   292	                                            ['options' => ['min_range' => 1]]);
+   293	                if ($validated_opt === false) {
+   294	                    throw new InvalidArgumentException(
+   295	                        "Позиция #{$index}: некорректный ID опции."
+   296	                    );
+   297	                }
+   298	                $optionIds[] = (int)$validated_opt;
+   299	            }
+   300	
+   301	            $validated[] = [
+   302	                'product_id'       => (int)$productId,
+   303	                'quantity'         => (int)$quantity,
+   304	                'selected_options' => $optionIds,
+   305	            ];
+   306	        }
+   307	
+   308	        return $validated;
+   309	    }
+   310	
+   311	    /**
+   312	     * Валидирует и санитизирует данные доставки.
+   313	     *
+   314	     * @param mixed $rawDelivery
+   315	     * @return array
+   316	     * @throws InvalidArgumentException
+   317	     */
+   318	    private function validateDelivery(mixed $rawDelivery): array
+   319	    {
+   320	        if (!is_array($rawDelivery)) {
+   321	            throw new InvalidArgumentException('Отсутствуют данные доставки.');
+   322	        }
+   323	
+   324	        $name    = $this->sanitizeString($rawDelivery['name']    ?? '');
+   325	        $phone   = $this->sanitizeString($rawDelivery['phone']   ?? '');
+   326	        $city    = $this->sanitizeString($rawDelivery['city']    ?? '');
+   327	        $address = $this->sanitizeString($rawDelivery['address'] ?? '');
+   328	        $comment = $this->sanitizeString($rawDelivery['comment'] ?? '');
+   329	
+   330	        // Обязательные поля
+   331	        if (mb_strlen($name) < 2 || mb_strlen($name) > 150) {
+   332	            throw new InvalidArgumentException('Укажите корректное имя (2–150 символов).');
+   333	        }
+   334	
+   335	        // Валидация телефона: допускаем форматы +7XXXXXXXXXX или 8XXXXXXXXXX
+   336	        if (!preg_match('/^(\+7|8)\d{10}$/', preg_replace('/[\s\-()]/', '', $phone))) {
+   337	            throw new InvalidArgumentException('Укажите корректный номер телефона.');
+   338	        }
+   339	
+   340	        if (mb_strlen($city) < 2 || mb_strlen($city) > 100) {
+   341	            throw new InvalidArgumentException('Укажите корректное название города.');
+   342	        }
+   343	
+   344	        if (mb_strlen($address) < 5 || mb_strlen($address) > 500) {
+   345	            throw new InvalidArgumentException('Укажите корректный адрес доставки.');
+   346	        }
+   347	
+   348	        return [
+   349	            'name'    => $name,
+   350	            'phone'   => $phone,
+   351	            'city'    => $city,
+   352	            'address' => $address,
+   353	            'comment' => mb_substr($comment, 0, 1000), // ограничиваем длину комментария
+   354	        ];
+   355	    }
+   356	
+   357	    // ==================================================================
+   358	    // БИЗНЕС-ЛОГИКА: РАСЧЁТ СТОИМОСТИ И ЗАПИСЬ В БД
+   359	    // ==================================================================
+   360	
+   361	    /**
+   362	     * Рассчитывает стоимость позиций заказа и записывает заказ в БД
+   363	     * в рамках одной транзакции InnoDB (гарантия ACID).
+   364	     *
+   365	     * Алгоритм расчёта стоимости:
+   366	     *   item_price = product.base_price + SUM(selected option.price_modifier)
+   367	     *   total      = SUM(item_price * quantity) по всем позициям
+   368	     *
+   369	     * @param array $items     Валидированные позиции заказа
+   370	     * @param array $delivery  Валидированные данные доставки
+   371	     * @return int             ID созданного заказа
+   372	     * @throws RuntimeException|InvalidArgumentException
+   373	     */
+   374	    private function persistOrder(array $items, array $delivery): int
+   375	    {
+   376	        $this->db->beginTransaction();
+   377	
+   378	        try {
+   379	            $totalOrderPrice = 0.0;
+   380	            $processedItems  = [];
+   381	
+   382	            foreach ($items as $item) {
+   383	                $productId = $item['product_id'];
+   384	                $quantity  = $item['quantity'];
+   385	                $optionIds = $item['selected_options'];
+   386	
+   387	                // --- Получаем базовую цену товара из БД ---
+   388	                // Это критически важно: нельзя доверять цене, переданной клиентом —
+   389	                // клиентская часть хранит отображаемые цены, реальные берём из БД.
+   390	                $productStmt = $this->db->prepare(
+   391	                    'SELECT id, base_price FROM products WHERE id = :id AND active = 1 LIMIT 1'
+   392	                );
+   393	                $productStmt->execute([':id' => $productId]);
+   394	                $product = $productStmt->fetch();
+   395	
+   396	                if ($product === false) {
+   397	                    throw new InvalidArgumentException(
+   398	                        "Товар с ID {$productId} не найден или недоступен."
+   399	                    );
+   400	                }
+   401	
+   402	                $itemPrice      = (float)$product['base_price'];
+   403	                $selectedOptions = [];
+   404	
+   405	                // --- Получаем и суммируем price_modifier выбранных опций ---
+   406	                if (!empty($optionIds)) {
+   407	                    $placeholders = implode(',', array_fill(0, count($optionIds), '?'));
+   408	
+   409	                    $optStmt = $this->db->prepare("
+   410	                        SELECT id, option_name_ru, price_modifier
+   411	                        FROM product_options
+   412	                        WHERE id IN ({$placeholders})
+   413	                          AND product_id = ?
+   414	                    ");
+   415	
+   416	                    // Передаём: сначала ID опций, затем ID продукта
+   417	                    $optStmt->execute([...$optionIds, $productId]);
+   418	                    $fetchedOptions = $optStmt->fetchAll();
+   419	
+   420	                    // Защита: количество найденных опций должно совпадать с запрошенными
+   421	                    if (count($fetchedOptions) !== count($optionIds)) {
+   422	                        throw new InvalidArgumentException(
+   423	                            "Одна или несколько выбранных опций для товара ID {$productId} не существуют."
+   424	                        );
+   425	                    }
+   426	
+   427	                    foreach ($fetchedOptions as $opt) {
+   428	                        $itemPrice += (float)$opt['price_modifier'];
+   429	                        $selectedOptions[] = [
+   430	                            'option_id'      => (int)$opt['id'],
+   431	                            'option_name_ru' => $opt['option_name_ru'],
+   432	                            'price_modifier' => (float)$opt['price_modifier'],
+   433	                        ];
+   434	                    }
+   435	                }
+   436	
+   437	                $lineTotal        = $itemPrice * $quantity;
+   438	                $totalOrderPrice += $lineTotal;
+   439	
+   440	                $processedItems[] = [
+   441	                    'product_id'           => $productId,
+   442	                    'quantity'             => $quantity,
+   443	                    'price'                => $itemPrice,
+   444	                    'selected_options_json' => json_encode(
+   445	                        $selectedOptions,
+   446	                        JSON_UNESCAPED_UNICODE
+   447	                    ),
+   448	                ];
+   449	            }
+   450	
+   451	            // --- Записываем заголовок заказа в таблицу orders ---
+   452	            $deliveryJson = json_encode($delivery, JSON_UNESCAPED_UNICODE);
+   453	
+   454	            $userId = $_SESSION['user_id'] ?? null; // null если гостевой заказ
+   455	
+   456	            $orderStmt = $this->db->prepare("
+   457	                INSERT INTO orders (user_id, total_price, status, delivery_info, created_at)
+   458	                VALUES (:user_id, :total_price, 'new', :delivery_info, NOW())
+   459	            ");
+   460	            $orderStmt->execute([
+   461	                ':user_id'       => $userId,
+   462	                ':total_price'   => round($totalOrderPrice, 2),
+   463	                ':delivery_info' => $deliveryJson,
+   464	            ]);
+   465	
+   466	            $orderId = (int)$this->db->lastInsertId();
+   467	
+   468	            // --- Записываем позиции заказа в таблицу order_items ---
+   469	            $itemStmt = $this->db->prepare("
+   470	                INSERT INTO order_items
+   471	                    (order_id, product_id, selected_options_json, quantity, price)
+   472	                VALUES
+   473	                    (:order_id, :product_id, :options_json, :quantity, :price)
+   474	            ");
+   475	
+   476	            foreach ($processedItems as $processed) {
+   477	                $itemStmt->execute([
+   478	                    ':order_id'    => $orderId,
+   479	                    ':product_id'  => $processed['product_id'],
+   480	                    ':options_json' => $processed['selected_options_json'],
+   481	                    ':quantity'    => $processed['quantity'],
+   482	                    ':price'       => round($processed['price'], 2),
+   483	                ]);
+   484	            }
+   485	
+   486	            // Всё прошло успешно — фиксируем транзакцию
+   487	            $this->db->commit();
+   488	
+   489	            return $orderId;
+   490	
+   491	        } catch (\Throwable $e) {
+   492	            // При любой ошибке откатываем транзакцию — частичных заказов не будет
+   493	            $this->db->rollBack();
+   494	            throw $e;
+   495	        }
+   496	    }
+   497	
+   498	    /**
+   499	     * Возвращает данные заказа по его ID (для страницы подтверждения).
+   500	     */
+   501	    private function getOrderById(int $orderId): ?array
+   502	    {
+   503	        $stmt = $this->db->prepare(
+   504	            'SELECT id, total_price, status, delivery_info, created_at
+   505	             FROM orders WHERE id = :id LIMIT 1'
+   506	        );
+   507	        $stmt->execute([':id' => $orderId]);
+   508	        $order = $stmt->fetch();
+   509	
+   510	        return $order !== false ? $order : null;
+   511	    }
+   512	
+   513	    // ==================================================================
+   514	    // УТИЛИТЫ САНИТИЗАЦИИ
+   515	    // ==================================================================
+   516	
+   517	    /**
+   518	     * Очищает строку от пробелов и экранирует HTML-спецсимволы.
+   519	     * htmlspecialchars с ENT_QUOTES экранирует как " так и ' —
+   520	     * защита от XSS при последующем выводе в HTML-контексте.
+   521	     *
+   522	     * @param mixed  $value   Входное значение
+   523	     * @param int    $maxLen  Максимальная длина после обрезки
+   524	     * @return string
+   525	     */
+   526	    private function sanitizeString(mixed $value, int $maxLen = 500): string
+   527	    {
+   528	        if (!is_string($value) && !is_numeric($value)) {
+   529	            return '';
+   530	        }
+   531	
+   532	        $clean = trim((string)$value);
+   533	        $clean = mb_substr($clean, 0, $maxLen);
+   534	
+   535	        // ENT_QUOTES: экранируем и двойные, и одинарные кавычки
+   536	        return htmlspecialchars($clean, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+   537	    }
+   538	}
+
+
+################################################################
+# ФАЙЛ: controllers/LeadController.php
+################################################################
+
+     1	<?php
+     2	/**
+     3	 * LeadController.php
+     4	 *
+     5	 * Приём заявок на коммерческое предложение (лиды).
+     6	 * CSRF и санитизация — по паттерну OrderController.
+     7	 */
+     8	
+     9	declare(strict_types=1);
+    10	
+    11	namespace App\Controllers;
+    12	
+    13	use App\Config\Database;
+    14	use InvalidArgumentException;
+    15	use PDO;
+    16	use RuntimeException;
+    17	
+    18	class LeadController
+    19	{
+    20	    private PDO $db;
+    21	
+    22	    private const ALLOWED_SOURCES = ['home', 'cases', 'contacts', 'product'];
+    23	
+    24	    public function __construct()
+    25	    {
+    26	        $this->db = Database::getInstance();
+    27	        $this->startSecureSession();
+    28	    }
+    29	
+    30	    private function startSecureSession(): void
+    31	    {
+    32	        if (session_status() === PHP_SESSION_NONE) {
+    33	            $config = require __DIR__ . '/../config/config.php';
+    34	            $sess   = $config['session'];
+    35	
+    36	            session_set_cookie_params([
+    37	                'lifetime' => $sess['lifetime'],
+    38	                'path'     => '/',
+    39	                'domain'   => '',
+    40	                'secure'   => $sess['secure'],
+    41	                'httponly' => $sess['httponly'],
+    42	                'samesite' => $sess['samesite'],
+    43	            ]);
+    44	
+    45	            session_start();
+    46	        }
+    47	    }
+    48	
+    49	    public function generateCsrfToken(): string
+    50	    {
+    51	        $token = bin2hex(random_bytes(32));
+    52	        $_SESSION['csrf_token'] = $token;
+    53	
+    54	        return $token;
+    55	    }
+    56	
+    57	    private function validateCsrfToken(string $tokenFromRequest): void
+    58	    {
+    59	        $sessionToken = $_SESSION['csrf_token'] ?? '';
+    60	
+    61	        if (
+    62	            empty($sessionToken) ||
+    63	            !hash_equals($sessionToken, $tokenFromRequest)
+    64	        ) {
+    65	            throw new RuntimeException('Недействительный CSRF-токен.', 403);
+    66	        }
+    67	
+    68	        unset($_SESSION['csrf_token']);
+    69	    }
+    70	
+    71	    /**
+    72	     * POST /api/lead/create
+    73	     */
+    74	    public function createLead(): void
+    75	    {
+    76	        header('Content-Type: application/json; charset=utf-8');
+    77	
+    78	        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    79	            http_response_code(405);
+    80	            echo json_encode(['success' => false, 'error' => 'Метод не разрешён.'],
+    81	                JSON_UNESCAPED_UNICODE);
+    82	            return;
+    83	        }
+    84	
+    85	        try {
+    86	            $rawBody = file_get_contents('php://input');
+    87	            $data    = json_decode($rawBody, true);
+    88	
+    89	            if (json_last_error() !== JSON_ERROR_NONE || !is_array($data)) {
+    90	                throw new InvalidArgumentException('Некорректный формат JSON в теле запроса.');
+    91	            }
+    92	
+    93	            $csrfToken = $this->sanitizeString($data['csrf_token'] ?? '');
+    94	            $this->validateCsrfToken($csrfToken);
+    95	
+    96	            $lead = $this->validateLead($data);
+    97	            $leadId = $this->persistLead($lead);
+    98	
+    99	            http_response_code(201);
+   100	            echo json_encode([
+   101	                'success' => true,
+   102	                'id'      => $leadId,
+   103	            ], JSON_UNESCAPED_UNICODE);
+   104	
+   105	        } catch (InvalidArgumentException $e) {
+   106	            http_response_code(422);
+   107	            echo json_encode(['success' => false, 'error' => $e->getMessage()],
+   108	                JSON_UNESCAPED_UNICODE);
+   109	
+   110	        } catch (RuntimeException $e) {
+   111	            http_response_code($e->getCode() ?: 500);
+   112	            echo json_encode(['success' => false, 'error' => $e->getMessage()],
+   113	                JSON_UNESCAPED_UNICODE);
+   114	
+   115	        } catch (\Throwable $e) {
+   116	            error_log('[LeadController] Unexpected error: ' . $e->getMessage());
+   117	            http_response_code(500);
+   118	            echo json_encode(['success' => false, 'error' => 'Внутренняя ошибка сервера.'],
+   119	                JSON_UNESCAPED_UNICODE);
+   120	        }
+   121	    }
+   122	
+   123	    /**
+   124	     * @param array<string, mixed> $data
+   125	     * @return array<string, string|null>
+   126	     */
+   127	    private function validateLead(array $data): array
+   128	    {
+   129	        $name = $this->sanitizeString($data['name'] ?? '', 150);
+   130	        if (mb_strlen($name) < 2 || mb_strlen($name) > 150) {
+   131	            throw new InvalidArgumentException('Укажите корректное имя (2–150 символов).');
+   132	        }
+   133	
+   134	        $email = trim((string)($data['email'] ?? ''));
+   135	        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+   136	            throw new InvalidArgumentException('Укажите корректный email.');
+   137	        }
+   138	        $email = $this->sanitizeString($email, 255);
+   139	
+   140	        $phoneRaw = trim((string)($data['phone'] ?? ''));
+   141	        $phoneDigits = preg_replace('/\D/', '', $phoneRaw) ?? '';
+   142	        if (strlen($phoneDigits) < 10) {
+   143	            throw new InvalidArgumentException('Укажите корректный номер телефона (минимум 10 цифр).');
+   144	        }
+   145	        $phone = $this->sanitizeString($phoneRaw, 50);
+   146	
+   147	        $organization = $this->sanitizeString($data['organization'] ?? '', 200);
+   148	        $organization = $organization !== '' ? $organization : null;
+   149	
+   150	        $comment = $this->sanitizeString($data['comment'] ?? '', 2000);
+   151	        $comment = $comment !== '' ? $comment : null;
+   152	
+   153	        $source = $this->sanitizeString($data['source'] ?? 'home', 20);
+   154	        if (!in_array($source, self::ALLOWED_SOURCES, true)) {
+   155	            $source = 'home';
+   156	        }
+   157	
+   158	        return [
+   159	            'email'        => $email,
+   160	            'name'         => $name,
+   161	            'phone'        => $phone,
+   162	            'organization' => $organization,
+   163	            'comment'      => $comment,
+   164	            'source'       => $source,
+   165	        ];
+   166	    }
+   167	
+   168	    /**
+   169	     * @param array<string, string|null> $lead
+   170	     */
+   171	    private function persistLead(array $lead): int
+   172	    {
+   173	        $stmt = $this->db->prepare("
+   174	            INSERT INTO leads (email, name, phone, organization, comment, source, status, created_at)
+   175	            VALUES (:email, :name, :phone, :organization, :comment, :source, 'new', NOW())
+   176	        ");
+   177	
+   178	        $stmt->execute([
+   179	            ':email'        => $lead['email'],
+   180	            ':name'         => $lead['name'],
+   181	            ':phone'        => $lead['phone'],
+   182	            ':organization' => $lead['organization'],
+   183	            ':comment'      => $lead['comment'],
+   184	            ':source'       => $lead['source'],
+   185	        ]);
+   186	
+   187	        return (int)$this->db->lastInsertId();
+   188	    }
+   189	
+   190	    private function sanitizeString(mixed $value, int $maxLen = 500): string
+   191	    {
+   192	        if (!is_string($value) && !is_numeric($value)) {
+   193	            return '';
+   194	        }
+   195	
+   196	        $clean = trim((string)$value);
+   197	        $clean = mb_substr($clean, 0, $maxLen);
+   198	
+   199	        return htmlspecialchars($clean, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+   200	    }
+   201	}
+
+
+################################################################
+# ФАЙЛ: views/helpers.php
+################################################################
+
+     1	<?php
+     2	
+     3	declare(strict_types=1);
+     4	
+     5	/**
+     6	 * Экранирует строку для вывода в HTML.
+     7	 */
+     8	function e(mixed $value): string
+     9	{
+    10	    return htmlspecialchars((string)$value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    11	}
+    12	
+    13	/**
+    14	 * Форматирует цену в тенге.
+    15	 */
+    16	function format_price(float $value): string
+    17	{
+    18	    return number_format($value, 0, '.', ' ') . ' ₸';
+    19	}
+    20	
+    21	/**
+    22	 * Проверяет наличие файла в public/ и возвращает URL или placeholder.
+    23	 */
+    24	function public_image_url(string $publicPath, string $placeholder = '/public/images/placeholder.webp'): string
+    25	{
+    26	    $normalized = str_starts_with($publicPath, '/public/')
+    27	        ? substr($publicPath, strlen('/public'))
+    28	        : $publicPath;
+    29	
+    30	    $filePath = dirname(__DIR__) . '/public' . $normalized;
+    31	
+    32	    return is_file($filePath) ? $publicPath : $placeholder;
+    33	}
+    34	
+    35	/**
+    36	 * Возвращает URL превью товара или placeholder, если файла нет.
+    37	 */
+    38	function product_image(?string $path): string
+    39	{
+    40	    $placeholder = '/public/images/placeholder.webp';
+    41	
+    42	    if ($path === null || trim($path) === '') {
+    43	        return $placeholder;
+    44	    }
+    45	
+    46	    return public_image_url($path, $placeholder);
+    47	}
+    48	
+    49	/**
+    50	 * Превью категории каталога по slug.
+    51	 */
+    52	function category_image(string $slug): string
+    53	{
+    54	    $paths = [
+    55	        'bedroom'     => '/public/images/categories/bedroom.jpg',
+    56	        'living-room' => '/public/images/categories/living-room.jpg',
+    57	        'kitchen'     => '/public/images/categories/kitchen.jpg',
+    58	        'home-office' => '/public/images/categories/home-office.jpg',
+    59	        'entryway'    => '/public/images/categories/entryway.jpg',
+    60	        'kids'        => '/public/images/categories/kids.jpg',
+    61	    ];
+    62	
+    63	    return public_image_url($paths[$slug] ?? '/public/images/placeholder.webp');
+    64	}
+    65	
+    66	/**
+    67	 * Канонический ключ SKU для метаданных конфигуратора.
+    68	 */
+    69	function product_sku_key(string $sku): string
+    70	{
+    71	    return match ($sku) {
+    72	        'ETEO-D1-BASE' => 'BEDROOM-SET-01',
+    73	        'ETEO-M3-BASE' => 'LIVING-ROOM-SET-01',
+    74	        default        => $sku,
+    75	    };
+    76	}
+    77	
+    78	/**
+    79	 * Ссылка на карточку товара (slug предпочтительнее id).
+    80	 *
+    81	 * @param array{id?: int|string, slug?: string|null} $product
+    82	 */
+    83	function product_href(array $product): string
+    84	{
+    85	    $slug = trim((string)($product['slug'] ?? ''));
+    86	
+    87	    if ($slug !== '') {
+    88	        return '/product/' . rawurlencode($slug);
+    89	    }
+    90	
+    91	    return '/product/' . (int)($product['id'] ?? 0);
+    92	}
+    93	
+    94	/**
+    95	 * Тексты конфигуратора, привязанные к конкретной модели.
+    96	 *
+    97	 * @return array{intro: string, groups: array<string, string>}|null
+    98	 */
+    99	function product_configurator_meta(string $sku): ?array
+   100	{
+   101	    $meta = [
+   102	        'BEDROOM-SET-01' => [
+   103	            'intro'  => 'Настройте спальный гарнитур: ткань изголовья, размер кровати и модули хранения.',
+   104	            'groups' => [
+   105	                'material' => 'Ткань изголовья и боковин',
+   106	                'config'   => 'Размер кровати',
+   107	                'extras'   => 'Сон и системы хранения',
+   108	            ],
+   109	        ],
+   110	        'BEDROOM-BED-02' => [
+   111	            'intro'  => 'Кровать D2: выберите материал каркаса, тип основания и удобства.',
+   112	            'groups' => [
+   113	                'material' => 'Материал каркаса',
+   114	                'config'   => 'Тип основания',
+   115	                'extras'   => 'Комфорт и электрика',
+   116	            ],
+   117	        ],
+   118	        'LIVING-ROOM-SET-01' => [
+   119	            'intro'  => 'Гостиный гарнитур M3: обивка дивана, планировка и модули под ТВ-зону.',
+   120	            'groups' => [
+   121	                'material' => 'Обивка дивана',
+   122	                'config'   => 'Планировка дивана',
+   123	                'extras'   => 'Модули гостиной',
+   124	            ],
+   125	        ],
+   126	        'LIVING-CHAIR-02' => [
+   127	            'intro'  => 'Выберите обивку и дополнительные опции.',
+   128	            'groups' => [
+   129	                'material' => 'Обивка кресла',
+   130	                'extras'   => 'Дополнительно',
+   131	            ],
+   132	        ],
+   133	        'KITCHEN-DINING-01' => [
+   134	            'intro'  => 'Обеденная группа K1: столешница, размер стола и комплект стульев.',
+   135	            'groups' => [
+   136	                'material' => 'Столешница',
+   137	                'config'   => 'Размер обеденного стола',
+   138	                'extras'   => 'Освещение и хранение',
+   139	            ],
+   140	        ],
+   141	        'HOME-OFFICE-01' => [
+   142	            'intro'  => 'Домашний офис O1: столешница, ширина стола и эргономичные дополнения.',
+   143	            'groups' => [
+   144	                'material' => 'Столешница стола',
+   145	                'config'   => 'Ширина рабочего стола',
+   146	                'extras'   => 'Организация рабочего места',
+   147	            ],
+   148	        ],
+   149	        'ENTRYWAY-01' => [
+   150	            'intro'  => 'Прихожая E1: фасад, комплектация (обувница, зеркало, банкетка) и подсветка.',
+   151	            'groups' => [
+   152	                'material' => 'Цвет фасада',
+   153	                'config'   => 'Комплектация',
+   154	                'extras'   => 'Фурнитура и свет',
+   155	            ],
+   156	        ],
+   157	        'KIDS-ROOM-01' => [
+   158	            'intro'  => 'Детская K1: фасады, комплект (кровать, стол, шкаф) и безопасные опции.',
+   159	            'groups' => [
+   160	                'material' => 'Фасад и кромка',
+   161	                'config'   => 'Комплект мебели',
+   162	                'extras'   => 'Безопасность и учёба',
+   163	            ],
+   164	        ],
+   165	    ];
+   166	
+   167	    return $meta[product_sku_key($sku)] ?? null;
+   168	}
+   169	
+   170	/**
+   171	 * Товары с опциями конфигуратора (для карусели на главной).
+   172	 *
+   173	 * @param list<array<string, mixed>> $products
+   174	 * @return list<array<string, mixed>>
+   175	 */
+   176	function filter_configurable_products(array $products): array
+   177	{
+   178	    return array_values(array_filter(
+   179	        $products,
+   180	        static fn(array $product): bool => !empty($product['options'])
+   181	    ));
+   182	}
+   183	
+   184	/**
+   185	 * Подпись варианта в конфигураторе: для select — значение (Велюр), для checkbox — название опции.
+   186	 */
+   187	function option_choice_label(array $option): string
+   188	{
+   189	    $type = (string)($option['option_type'] ?? 'select');
+   190	
+   191	    if ($type === 'select') {
+   192	        $value = trim((string)($option['option_value'] ?? ''));
+   193	
+   194	        return $value !== '' ? $value : trim((string)($option['option_name'] ?? ''));
+   195	    }
+   196	
+   197	    return trim((string)($option['option_name'] ?? ''));
+   198	}
+   199	
+   200	/**
+   201	 * Группы реальных вариантов конфигуратора для товара (для карусели и каталога).
+   202	 *
+   203	 * @return list<array{title: string, values: list<string>}>
+   204	 */
+   205	function product_configurator_preview_groups(array $product): array
+   206	{
+   207	    $sku   = (string)($product['sku'] ?? '');
+   208	    $meta  = product_configurator_meta($sku);
+   209	    $order = ['material', 'config', 'extras'];
+   210	    $bucket = [];
+   211	
+   212	    foreach ($product['options'] ?? [] as $option) {
+   213	        $group = (string)($option['option_group'] ?? 'other');
+   214	        $label = option_choice_label($option);
+   215	
+   216	        if ($label === '') {
+   217	            continue;
+   218	        }
+   219	
+   220	        if (!isset($bucket[$group])) {
+   221	            $bucket[$group] = [];
+   222	        }
+   223	
+   224	        if (!in_array($label, $bucket[$group], true)) {
+   225	            $bucket[$group][] = $label;
+   226	        }
+   227	    }
+   228	
+   229	    $groups = [];
+   230	
+   231	    foreach ($order as $groupKey) {
+   232	        if (empty($bucket[$groupKey])) {
+   233	            continue;
+   234	        }
+   235	
+   236	        $title = $meta['groups'][$groupKey] ?? match ($groupKey) {
+   237	            'material' => 'Материал',
+   238	            'config'   => 'Конфигурация',
+   239	            'extras'   => 'Дополнительно',
+   240	            default    => ucfirst($groupKey),
+   241	        };
+   242	
+   243	        $groups[] = [
+   244	            'title'  => $title,
+   245	            'values' => $bucket[$groupKey],
+   246	        ];
+   247	    }
+   248	
+   249	    return $groups;
+   250	}
+   251	
+   252	/**
+   253	 * @param list<array<string, mixed>> $allProducts
+   254	 * @return list<array{label: string, href: string}>
+   255	 */
+   256	function build_category_configurator_variants(int $categoryId, array $allProducts): array
+   257	{
+   258	    $variants = [];
+   259	
+   260	    foreach ($allProducts as $product) {
+   261	        if ((int)($product['category_id'] ?? 0) !== $categoryId) {
+   262	            continue;
+   263	        }
+   264	
+   265	        if (empty($product['options'])) {
+   266	            continue;
+   267	        }
+   268	
+   269	        $variants[] = [
+   270	            'label' => trim((string)($product['name'] ?? 'Модель')),
+   271	            'href'  => product_href($product),
+   272	        ];
+   273	    }
+   274	
+   275	    if ($variants !== []) {
+   276	        $variants[] = [
+   277	            'label' => 'Все модели категории',
+   278	            'href'  => '/catalog/' . $categoryId,
+   279	        ];
+   280	    }
+   281	
+   282	    return $variants;
+   283	}
+   284	
+   285	/**
+   286	 * Slug категорий для блока «Наши направления» на главной.
+   287	 *
+   288	 * @return list<string>
+   289	 */
+   290	function home_catalog_direction_slugs(): array
+   291	{
+   292	    return ['bedroom', 'living-room', 'kitchen'];
+   293	}
+   294	
+   295	/**
+   296	 * Метаданные направлений каталога (по slug категории из БД).
+   297	 *
+   298	 * @return array<string, array{title: string, description: string}>
+   299	 */
+   300	function catalog_direction_meta_by_slug(): array
+   301	{
+   302	    return [
+   303	        'bedroom' => [
+   304	            'title'       => 'Спальня',
+   305	            'description' => 'Кровати, тумбы, комоды и системы хранения для комфортного отдыха.',
+   306	        ],
+   307	        'living-room' => [
+   308	            'title'       => 'Гостиная',
+   309	            'description' => 'Диваны, кресла, журнальные столики и модульные решения для семейного отдыха.',
+   310	        ],
+   311	        'kitchen' => [
+   312	            'title'       => 'Кухня',
+   313	            'description' => 'Столы, стулья и функциональная мебель для удобного приготовления и хранения.',
+   314	        ],
+   315	        'home-office' => [
+   316	            'title'       => 'Домашний офис',
+   317	            'description' => 'Рабочие столы, кресла и системы хранения для продуктивной работы дома.',
+   318	        ],
+   319	        'entryway' => [
+   320	            'title'       => 'Прихожая',
+   321	            'description' => 'Вешалки, обувницы и компактные системы хранения для порядка у входа.',
+   322	        ],
+   323	        'kids' => [
+   324	            'title'       => 'Детская',
+   325	            'description' => 'Безопасная и эргономичная мебель для сна, учёбы и игр.',
+   326	        ],
+   327	    ];
+   328	}
+   329	
+   330	/**
+   331	 * @param array{id: int|string, slug?: string, name?: string} $category
+   332	 * @param list<array<string, mixed>> $allProducts
+   333	 * @return array{
+   334	 *     id: int,
+   335	 *     title: string,
+   336	 *     description: string,
+   337	 *     variants: list<array{label: string, href: string}>
+   338	 * }|null
+   339	 */
+   340	function get_catalog_direction_for_category(array $category, array $allProducts = []): ?array
+   341	{
+   342	    $slug = (string)($category['slug'] ?? '');
+   343	    $meta = catalog_direction_meta_by_slug()[$slug] ?? null;
+   344	
+   345	    if ($meta === null) {
+   346	        return null;
+   347	    }
+   348	
+   349	    $categoryId = (int)$category['id'];
+   350	
+   351	    return [
+   352	        'id'          => $categoryId,
+   353	        'slug'        => $slug,
+   354	        'title'       => $meta['title'],
+   355	        'description' => $meta['description'],
+   356	        'variants'    => build_category_configurator_variants($categoryId, $allProducts),
+   357	    ];
+   358	}
+   359	
+   360	/**
+   361	 * Направления для главной (по slug, в фиксированном порядке).
+   362	 *
+   363	 * @param list<array{id: int|string, slug: string, name: string}> $categories
+   364	 * @return list<array{
+   365	 *     id: int,
+   366	 *     title: string,
+   367	 *     description: string,
+   368	 *     variants: list<array{label: string, href: string}>
+   369	 * }>
+   370	 */
+   371	function get_home_catalog_directions(array $categories, array $allProducts = []): array
+   372	{
+   373	    $bySlug = [];
+   374	
+   375	    foreach ($categories as $category) {
+   376	        $bySlug[(string)($category['slug'] ?? '')] = $category;
+   377	    }
+   378	
+   379	    $directions = [];
+   380	
+   381	    foreach (home_catalog_direction_slugs() as $slug) {
+   382	        if (!isset($bySlug[$slug])) {
+   383	            continue;
+   384	        }
+   385	
+   386	        $direction = get_catalog_direction_for_category($bySlug[$slug], $allProducts);
+   387	
+   388	        if ($direction !== null) {
+   389	            $directions[] = $direction;
+   390	        }
+   391	    }
+   392	
+   393	    return $directions;
+   394	}
+   395	
+   396	/**
+   397	 * @return list<array{label: string, href: string}>
+   398	 */
+   399	function get_catalog_variants_for_category(array $category, array $allProducts = []): array
+   400	{
+   401	    return get_catalog_direction_for_category($category, $allProducts)['variants'] ?? [];
+   402	}
+   403	
+   404	/**
+   405	 * @param array{id: int|string, slug?: string} $category
+   406	 * @param array{id: int|string, slug?: string|null} $product
+   407	 * @return list<array{label: string, href: string}>
+   408	 */
+   409	function get_catalog_variants_except_product(array $category, array $product, array $allProducts = []): array
+   410	{
+   411	    $currentHref = product_href($product);
+   412	
+   413	    return array_values(array_filter(
+   414	        get_catalog_variants_for_category($category, $allProducts),
+   415	        static fn(array $variant): bool => $variant['href'] !== $currentHref
+   416	    ));
+   417	}
+
+
+================================================================
+ЧАСТЬ B. СКРИПТЫ СОЗДАНИЯ СХЕМЫ БАЗЫ ДАННЫХ (SQL)
+Порядок применения: schema.sql → migrations/001 → migrations/002
+================================================================
+
+
+################################################################
+# ФАЙЛ: sql/schema.sql
+################################################################
+
+     1	-- =============================================================
+     2	-- СХЕМА БАЗЫ ДАННЫХ: Веб-платформа мебельного производства
+     3	-- Кодировка: utf8mb4_unicode_ci (полная поддержка Unicode / эмодзи)
+     4	-- Движок: InnoDB (поддержка внешних ключей, транзакций ACID)
+     5	-- =============================================================
+     6	
+     7	CREATE DATABASE IF NOT EXISTS furniture_platform
+     8	    CHARACTER SET utf8mb4
+     9	    COLLATE utf8mb4_unicode_ci;
+    10	
+    11	USE furniture_platform;
+    12	
+    13	-- -------------------------------------------------------------
+    14	-- Таблица пользователей системы
+    15	-- Роли: client — покупатель, manager — менеджер заказов, admin — суперадмин
+    16	-- -------------------------------------------------------------
+    17	CREATE TABLE IF NOT EXISTS users (
+    18	    id            INT UNSIGNED     NOT NULL AUTO_INCREMENT,
+    19	    name          VARCHAR(150)     NOT NULL COMMENT 'Полное имя пользователя',
+    20	    email         VARCHAR(255)     NOT NULL COMMENT 'Уникальный e-mail (логин)',
+    21	    password_hash VARCHAR(255)     NOT NULL COMMENT 'bcrypt-хеш пароля (cost >= 12)',
+    22	    role          ENUM('client','manager','admin')
+    23	                                   NOT NULL DEFAULT 'client',
+    24	    created_at    DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    25	
+    26	    PRIMARY KEY (id),
+    27	    UNIQUE KEY uq_users_email (email),
+    28	    INDEX idx_users_role (role)
+    29	) ENGINE=InnoDB
+    30	  DEFAULT CHARSET=utf8mb4
+    31	  COLLATE=utf8mb4_unicode_ci
+    32	  COMMENT='Зарегистрированные пользователи платформы';
+    33	
+    34	
+    35	-- -------------------------------------------------------------
+    36	-- Таблица категорий товаров (двуязычная: RU + KK)
+    37	-- -------------------------------------------------------------
+    38	CREATE TABLE IF NOT EXISTS categories (
+    39	    id       INT UNSIGNED  NOT NULL AUTO_INCREMENT,
+    40	    name_ru  VARCHAR(200)  NOT NULL COMMENT 'Название на русском',
+    41	    name_kk  VARCHAR(200)  NOT NULL COMMENT 'Название на казахском',
+    42	    slug     VARCHAR(220)  NOT NULL COMMENT 'URL-совместимый идентификатор (латиница)',
+    43	
+    44	    PRIMARY KEY (id),
+    45	    UNIQUE KEY uq_categories_slug (slug),
+    46	    INDEX idx_categories_name_ru (name_ru)
+    47	) ENGINE=InnoDB
+    48	  DEFAULT CHARSET=utf8mb4
+    49	  COLLATE=utf8mb4_unicode_ci
+    50	  COMMENT='Иерархия категорий мебельного каталога';
+    51	
+    52	
+    53	-- -------------------------------------------------------------
+    54	-- Таблица товаров
+    55	-- Внешний ключ: category_id → categories.id (CASCADE DELETE для
+    56	-- автоматической очистки сирот при удалении категории)
+    57	-- -------------------------------------------------------------
+    58	CREATE TABLE IF NOT EXISTS products (
+    59	    id              INT UNSIGNED      NOT NULL AUTO_INCREMENT,
+    60	    category_id     INT UNSIGNED      NOT NULL,
+    61	    name_ru         VARCHAR(300)      NOT NULL COMMENT 'Наименование (RU)',
+    62	    name_kk         VARCHAR(300)      NOT NULL COMMENT 'Наименование (KK)',
+    63	    description_ru  TEXT                       COMMENT 'Полное описание (RU)',
+    64	    description_kk  TEXT                       COMMENT 'Полное описание (KK)',
+    65	    base_price      DECIMAL(12, 2)    NOT NULL DEFAULT 0.00
+    66	                    COMMENT 'Базовая цена базовой конфигурации, тенге',
+    67	    image_preview   VARCHAR(500)               COMMENT 'Путь к превью-изображению',
+    68	    active          TINYINT(1)        NOT NULL DEFAULT 1
+    69	                    COMMENT '1 — опубликован, 0 — скрыт',
+    70	    sku             VARCHAR(100)      NOT NULL COMMENT 'Артикул (Stock Keeping Unit)',
+    71	    created_at      DATETIME          NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    72	
+    73	    PRIMARY KEY (id),
+    74	    UNIQUE KEY uq_products_sku (sku),
+    75	    INDEX idx_products_category (category_id),
+    76	    INDEX idx_products_active  (active),
+    77	    CONSTRAINT fk_products_category
+    78	        FOREIGN KEY (category_id)
+    79	        REFERENCES categories (id)
+    80	        ON UPDATE CASCADE
+    81	        ON DELETE RESTRICT   -- запрет удаления категории при наличии товаров
+    82	) ENGINE=InnoDB
+    83	  DEFAULT CHARSET=utf8mb4
+    84	  COLLATE=utf8mb4_unicode_ci
+    85	  COMMENT='Каталог мебельной продукции';
+    86	
+    87	
+    88	-- -------------------------------------------------------------
+    89	-- Таблица конфигурационных опций товаров
+    90	-- Примеры опций: Материал столешницы (select),
+    91	--                LED-подсветка (checkbox), Блок розеток (checkbox)
+    92	-- price_modifier — надбавка к base_price (может быть отрицательной)
+    93	-- -------------------------------------------------------------
+    94	CREATE TABLE IF NOT EXISTS product_options (
+    95	    id              INT UNSIGNED     NOT NULL AUTO_INCREMENT,
+    96	    product_id      INT UNSIGNED     NOT NULL,
+    97	    option_name_ru  VARCHAR(200)     NOT NULL COMMENT 'Название опции (RU)',
+    98	    option_name_kk  VARCHAR(200)     NOT NULL COMMENT 'Название опции (KK)',
+    99	    option_type     ENUM('select','checkbox')
+   100	                                     NOT NULL DEFAULT 'select',
+   101	    option_value_ru VARCHAR(200)              COMMENT 'Значение опции — для select (RU)',
+   102	    option_value_kk VARCHAR(200)              COMMENT 'Значение опции — для select (KK)',
+   103	    option_group    VARCHAR(100)              COMMENT 'Группировка опций одного select',
+   104	    price_modifier  DECIMAL(12, 2)   NOT NULL DEFAULT 0.00
+   105	                    COMMENT 'Прибавка к итоговой цене, тенге',
+   106	    sort_order      SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+   107	
+   108	    PRIMARY KEY (id),
+   109	    INDEX idx_po_product (product_id),
+   110	    INDEX idx_po_group   (product_id, option_group),
+   111	    CONSTRAINT fk_product_options_product
+   112	        FOREIGN KEY (product_id)
+   113	        REFERENCES products (id)
+   114	        ON UPDATE CASCADE
+   115	        ON DELETE CASCADE   -- опции удаляются вместе с товаром
+   116	) ENGINE=InnoDB
+   117	  DEFAULT CHARSET=utf8mb4
+   118	  COLLATE=utf8mb4_unicode_ci
+   119	  COMMENT='Конфигурационные опции товаров (параметры кастомизации)';
+   120	
+   121	
+   122	-- -------------------------------------------------------------
+   123	-- Таблица заказов
+   124	-- delivery_info хранится как JSON-строка:
+   125	--   {"address":"...", "city":"...", "phone":"...", "comment":"..."}
+   126	-- -------------------------------------------------------------
+   127	CREATE TABLE IF NOT EXISTS orders (
+   128	    id            INT UNSIGNED     NOT NULL AUTO_INCREMENT,
+   129	    user_id       INT UNSIGNED              COMMENT 'NULL — гостевой заказ',
+   130	    total_price   DECIMAL(14, 2)   NOT NULL DEFAULT 0.00
+   131	                  COMMENT 'Итоговая сумма заказа, тенге',
+   132	    status        ENUM('new','processing','production','ready','shipped','done')
+   133	                                   NOT NULL DEFAULT 'new',
+   134	    delivery_info JSON                      COMMENT 'Контактные данные и адрес доставки',
+   135	    created_at    DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+   136	    updated_at    DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP
+   137	                                   ON UPDATE CURRENT_TIMESTAMP,
+   138	
+   139	    PRIMARY KEY (id),
+   140	    INDEX idx_orders_user   (user_id),
+   141	    INDEX idx_orders_status (status),
+   142	    INDEX idx_orders_date   (created_at),
+   143	    CONSTRAINT fk_orders_user
+   144	        FOREIGN KEY (user_id)
+   145	        REFERENCES users (id)
+   146	        ON UPDATE CASCADE
+   147	        ON DELETE SET NULL  -- заказ сохраняется при удалении аккаунта
+   148	) ENGINE=InnoDB
+   149	  DEFAULT CHARSET=utf8mb4
+   150	  COLLATE=utf8mb4_unicode_ci
+   151	  COMMENT='Заказы покупателей';
+   152	
+   153	
+   154	-- -------------------------------------------------------------
+   155	-- Таблица позиций заказа (строки корзины)
+   156	-- selected_options_json — снимок выбранных опций на момент заказа:
+   157	--   [{"option_id":3,"option_name_ru":"HPL-пластик","price_modifier":15000}, ...]
+   158	-- Снимок хранится намеренно — цена опции может измениться, но
+   159	-- зафиксированный заказ должен сохранять историческое значение.
+   160	-- -------------------------------------------------------------
+   161	CREATE TABLE IF NOT EXISTS order_items (
+   162	    id                    INT UNSIGNED    NOT NULL AUTO_INCREMENT,
+   163	    order_id              INT UNSIGNED    NOT NULL,
+   164	    product_id            INT UNSIGNED    NOT NULL,
+   165	    selected_options_json JSON                     COMMENT 'Снимок выбранных опций',
+   166	    quantity              SMALLINT UNSIGNED
+   167	                                          NOT NULL DEFAULT 1,
+   168	    price                 DECIMAL(12, 2)  NOT NULL DEFAULT 0.00
+   169	                          COMMENT 'Цена единицы с учётом опций на момент заказа',
+   170	
+   171	    PRIMARY KEY (id),
+   172	    INDEX idx_oi_order   (order_id),
+   173	    INDEX idx_oi_product (product_id),
+   174	    CONSTRAINT fk_order_items_order
+   175	        FOREIGN KEY (order_id)
+   176	        REFERENCES orders (id)
+   177	        ON UPDATE CASCADE
+   178	        ON DELETE CASCADE,
+   179	    CONSTRAINT fk_order_items_product
+   180	        FOREIGN KEY (product_id)
+   181	        REFERENCES products (id)
+   182	        ON UPDATE CASCADE
+   183	        ON DELETE RESTRICT
+   184	) ENGINE=InnoDB
+   185	  DEFAULT CHARSET=utf8mb4
+   186	  COLLATE=utf8mb4_unicode_ci
+   187	  COMMENT='Позиции (строки) заказов';
+   188	
+   189	
+   190	-- =============================================================
+   191	-- ДЕМО-ДАННЫЕ: категории и диспетчерская мебель
+   192	-- =============================================================
+   193	
+   194	INSERT INTO categories (name_ru, name_kk, slug) VALUES
+   195	('Диспетчерская мебель',   'Диспетчерлік жиһаз',    'dispetcherskaya'),
+   196	('Технологическая мебель', 'Технологиялық жиһаз',   'tekhnologicheskaya'),
+   197	('Модульные системы',      'Модульдік жүйелер',      'modulnye-sistemy');
+   198	
+   199	INSERT INTO products
+   200	    (category_id, name_ru, name_kk, description_ru, description_kk,
+   201	     base_price, sku, active)
+   202	VALUES
+   203	(
+   204	    1,
+   205	    'Диспетчерский пульт ETEO-D1',
+   206	    'ETEO-D1 диспетчерлік пульті',
+   207	    'Профессиональный диспетчерский пульт с эргономичной рабочей поверхностью, '
+   208	    'встроенным кабельным каналом и опциональными системами климат-контроля. '
+   209	    'Предназначен для операционных центров, ситуационных комнат и центров управления.',
+   210	    'Кабелдік арна, климат бақылау жүйесі және монитор кронштейндерімен '
+   211	    'жабдықталған кәсіби диспетчерлік пульт.',
+   212	    850000.00,
+   213	    'ETEO-D1-BASE',
+   214	    1
+   215	),
+   216	(
+   217	    1,
+   218	    'Модульный пульт ETEO-M3',
+   219	    'ETEO-M3 модульдік пульті',
+   220	    'Масштабируемый модульный пульт для крупных операционных центров. '
+   221	    'Возможность наращивания до 6 рабочих мест без потери эргономики.',
+   222	    'Үлкен операциялық орталықтарға арналған модульдік пульт. '
+   223	    '6 жұмыс орнына дейін кеңейту мүмкіндігі.',
+   224	    1250000.00,
+   225	    'ETEO-M3-BASE',
+   226	    1
+   227	);
+   228	
+   229	-- Опции для товара id=1 (ETEO-D1)
+   230	INSERT INTO product_options
+   231	    (product_id, option_name_ru, option_name_kk, option_type,
+   232	     option_value_ru, option_value_kk, option_group, price_modifier, sort_order)
+   233	VALUES
+   234	-- Группа: Материал столешницы (select — взаимоисключающий выбор)
+   235	(1, 'Материал столешницы', 'Үстел материалы', 'select',
+   236	 'ЛДСП стандарт', 'ЛДСП стандарт', 'material', 0.00, 1),
+   237	(1, 'Материал столешницы', 'Үстел материалы', 'select',
+   238	 'HPL-пластик', 'HPL-пластик', 'material', 45000.00, 2),
+   239	(1, 'Материал столешницы', 'Үстел материалы', 'select',
+   240	 'Натуральный шпон', 'Натурал шпон', 'material', 90000.00, 3),
+   241	
+   242	-- Группа: Конфигурация (select)
+   243	(1, 'Конфигурация', 'Конфигурация', 'select',
+   244	 'Прямая', 'Тура', 'config', 0.00, 4),
+   245	(1, 'Конфигурация', 'Конфигурация', 'select',
+   246	 'Радиусная', 'Радиустық', 'config', 60000.00, 5),
+   247	
+   248	-- Дополнительные опции (checkbox — независимый выбор)
+   249	(1, 'Блок розеток и USB', 'Розетка және USB блогы',
+   250	 'checkbox', NULL, NULL, 'extras', 18000.00, 6),
+   251	(1, 'Система климат-контроля', 'Климат бақылау жүйесі',
+   252	 'checkbox', NULL, NULL, 'extras', 75000.00, 7),
+   253	(1, 'Кронштейны для мониторов (3 шт.)', 'Монитор кронштейндері (3 дана)',
+   254	 'checkbox', NULL, NULL, 'extras', 36000.00, 8),
+   255	(1, 'LED-подсветка рабочей зоны', 'Жұмыс аймағының LED-жарықтандыруы',
+   256	 'checkbox', NULL, NULL, 'extras', 22000.00, 9),
+   257	(1, 'Встроенный кабельный канал', 'Кабельдік арна',
+   258	 'checkbox', NULL, NULL, 'extras', 12000.00, 10);
+   259	
+   260	-- Опции для товара id=2 (ETEO-M3)
+   261	INSERT INTO product_options
+   262	    (product_id, option_name_ru, option_name_kk, option_type,
+   263	     option_value_ru, option_value_kk, option_group, price_modifier, sort_order)
+   264	VALUES
+   265	-- Группа: Материал столешницы (select)
+   266	(2, 'Материал столешницы', 'Үстел материалы', 'select',
+   267	 'ЛДСП стандарт', 'ЛДСП стандарт', 'material', 0.00, 1),
+   268	(2, 'Материал столешницы', 'Үстел материалы', 'select',
+   269	 'HPL-пластик', 'HPL-пластик', 'material', 55000.00, 2),
+   270	(2, 'Материал столешницы', 'Үстел материалы', 'select',
+   271	 'Натуральный шпон', 'Натурал шпон', 'material', 110000.00, 3),
+   272	
+   273	-- Группа: Модульная конфигурация (select)
+   274	(2, 'Количество рабочих мест', 'Жұмыс орындарының саны', 'select',
+   275	 '3 места', '3 орын', 'config', 0.00, 4),
+   276	(2, 'Количество рабочих мест', 'Жұмыс орындарының саны', 'select',
+   277	 '4 места', '4 орын', 'config', 180000.00, 5),
+   278	(2, 'Количество рабочих мест', 'Жұмыс орындарының саны', 'select',
+   279	 '6 мест', '6 орын', 'config', 350000.00, 6),
+   280	
+   281	-- Дополнительные опции (checkbox)
+   282	(2, 'Блок розеток и USB', 'Розетка және USB блогы',
+   283	 'checkbox', NULL, NULL, 'extras', 22000.00, 7),
+   284	(2, 'Система климат-контроля', 'Климат бақылау жүйесі',
+   285	 'checkbox', NULL, NULL, 'extras', 85000.00, 8),
+   286	(2, 'Кронштейны для мониторов (6 шт.)', 'Монитор кронштейндері (6 дана)',
+   287	 'checkbox', NULL, NULL, 'extras', 54000.00, 9),
+   288	(2, 'LED-подсветка рабочей зоны', 'Жұмыс аймағының LED-жарықтандыруы',
+   289	 'checkbox', NULL, NULL, 'extras', 28000.00, 10),
+   290	(2, 'Модуль кабель-менеджмента', 'Кабель менеджмент модулі',
+   291	 'checkbox', NULL, NULL, 'extras', 35000.00, 11);
+
+
+################################################################
+# ФАЙЛ: sql/migrations/001_content_tables.sql
+################################################################
+
+     1	-- =============================================================
+     2	-- Миграция 001: таблицы контента (pages, product_series, cases,
+     3	-- faq_items, leads, site_settings)
+     4	-- Идемпотентно: CREATE TABLE IF NOT EXISTS
+     5	-- =============================================================
+     6	
+     7	USE furniture_platform;
+     8	
+     9	-- -------------------------------------------------------------
+    10	-- Статические страницы и блоки контента
+    11	-- -------------------------------------------------------------
+    12	CREATE TABLE IF NOT EXISTS pages (
+    13	    id          INT UNSIGNED     NOT NULL AUTO_INCREMENT,
+    14	    slug        VARCHAR(220)     NOT NULL COMMENT 'URL-идентификатор',
+    15	    type        ENUM('service','competence','advantage','static')
+    16	                                 NOT NULL,
+    17	    title_ru    VARCHAR(300)     NOT NULL,
+    18	    title_kk    VARCHAR(300)     NOT NULL,
+    19	    excerpt_ru  TEXT                      COMMENT 'Краткое описание (RU)',
+    20	    excerpt_kk  TEXT                      COMMENT 'Краткое описание (KK)',
+    21	    body_ru     MEDIUMTEXT                COMMENT 'Полный текст (RU)',
+    22	    body_kk     MEDIUMTEXT                COMMENT 'Полный текст (KK)',
+    23	    image       VARCHAR(500)              COMMENT 'Путь к изображению',
+    24	    sort_order  SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+    25	    active      TINYINT(1)       NOT NULL DEFAULT 1,
+    26	
+    27	    PRIMARY KEY (id),
+    28	    UNIQUE KEY uq_pages_slug (slug),
+    29	    INDEX idx_pages_type (type),
+    30	    INDEX idx_pages_active (active)
+    31	) ENGINE=InnoDB
+    32	  DEFAULT CHARSET=utf8mb4
+    33	  COLLATE=utf8mb4_unicode_ci
+    34	  COMMENT='Статические страницы и блоки контента';
+    35	
+    36	-- -------------------------------------------------------------
+    37	-- Серии продуктов (Van / One, Flow, Pulse)
+    38	-- -------------------------------------------------------------
+    39	CREATE TABLE IF NOT EXISTS product_series (
+    40	    id             INT UNSIGNED     NOT NULL AUTO_INCREMENT,
+    41	    slug           VARCHAR(220)     NOT NULL COMMENT 'URL-идентификатор серии',
+    42	    name_ru        VARCHAR(200)     NOT NULL,
+    43	    name_kk        VARCHAR(200)     NOT NULL,
+    44	    description_ru TEXT,
+    45	    description_kk TEXT,
+    46	    image          VARCHAR(500),
+    47	    sort_order     SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+    48	
+    49	    PRIMARY KEY (id),
+    50	    UNIQUE KEY uq_product_series_slug (slug)
+    51	) ENGINE=InnoDB
+    52	  DEFAULT CHARSET=utf8mb4
+    53	  COLLATE=utf8mb4_unicode_ci
+    54	  COMMENT='Серии продуктов (ETEO One, Flow, Pulse)';
+    55	
+    56	-- -------------------------------------------------------------
+    57	-- Портфолио / кейсы
+    58	-- -------------------------------------------------------------
+    59	CREATE TABLE IF NOT EXISTS cases (
+    60	    id          INT UNSIGNED     NOT NULL AUTO_INCREMENT,
+    61	    slug        VARCHAR(220)     NOT NULL COMMENT 'URL-идентификатор кейса',
+    62	    client      VARCHAR(200)     NOT NULL COMMENT 'Название клиента',
+    63	    title_ru    VARCHAR(300)     NOT NULL,
+    64	    title_kk    VARCHAR(300)     NOT NULL,
+    65	    excerpt_ru  TEXT,
+    66	    excerpt_kk  TEXT,
+    67	    body_ru     MEDIUMTEXT,
+    68	    body_kk     MEDIUMTEXT,
+    69	    image       VARCHAR(500),
+    70	    sort_order  SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+    71	    active      TINYINT(1)       NOT NULL DEFAULT 1,
+    72	    created_at  DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    73	
+    74	    PRIMARY KEY (id),
+    75	    UNIQUE KEY uq_cases_slug (slug),
+    76	    INDEX idx_cases_active (active)
+    77	) ENGINE=InnoDB
+    78	  DEFAULT CHARSET=utf8mb4
+    79	  COLLATE=utf8mb4_unicode_ci
+    80	  COMMENT='Портфолио реализованных проектов';
+    81	
+    82	-- -------------------------------------------------------------
+    83	-- FAQ
+    84	-- -------------------------------------------------------------
+    85	CREATE TABLE IF NOT EXISTS faq_items (
+    86	    id          INT UNSIGNED     NOT NULL AUTO_INCREMENT,
+    87	    question_ru VARCHAR(500)     NOT NULL,
+    88	    question_kk VARCHAR(500)     NOT NULL,
+    89	    answer_ru   TEXT             NOT NULL,
+    90	    answer_kk   TEXT             NOT NULL,
+    91	    sort_order  SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+    92	    active      TINYINT(1)       NOT NULL DEFAULT 1,
+    93	
+    94	    PRIMARY KEY (id),
+    95	    INDEX idx_faq_sort (sort_order),
+    96	    INDEX idx_faq_active (active)
+    97	) ENGINE=InnoDB
+    98	  DEFAULT CHARSET=utf8mb4
+    99	  COLLATE=utf8mb4_unicode_ci
+   100	  COMMENT='Часто задаваемые вопросы';
+   101	
+   102	-- -------------------------------------------------------------
+   103	-- Заявки на КП (лиды)
+   104	-- -------------------------------------------------------------
+   105	CREATE TABLE IF NOT EXISTS leads (
+   106	    id           INT UNSIGNED     NOT NULL AUTO_INCREMENT,
+   107	    email        VARCHAR(255)     NOT NULL,
+   108	    name         VARCHAR(150)     NOT NULL,
+   109	    phone        VARCHAR(50)      NOT NULL,
+   110	    organization VARCHAR(200),
+   111	    comment      TEXT,
+   112	    source       ENUM('home','cases','contacts','product')
+   113	                                  NOT NULL DEFAULT 'home',
+   114	    status       ENUM('new','contacted','done')
+   115	                                  NOT NULL DEFAULT 'new',
+   116	    created_at   DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+   117	
+   118	    PRIMARY KEY (id),
+   119	    INDEX idx_leads_status (status),
+   120	    INDEX idx_leads_source (source),
+   121	    INDEX idx_leads_created (created_at)
+   122	) ENGINE=InnoDB
+   123	  DEFAULT CHARSET=utf8mb4
+   124	  COLLATE=utf8mb4_unicode_ci
+   125	  COMMENT='Заявки на коммерческое предложение';
+   126	
+   127	-- -------------------------------------------------------------
+   128	-- Настройки сайта (контакты, hero, соцсети)
+   129	-- -------------------------------------------------------------
+   130	CREATE TABLE IF NOT EXISTS site_settings (
+   131	    setting_key VARCHAR(100) NOT NULL COMMENT 'Ключ настройки',
+   132	    value_ru    TEXT,
+   133	    value_kk    TEXT,
+   134	
+   135	    PRIMARY KEY (setting_key)
+   136	) ENGINE=InnoDB
+   137	  DEFAULT CHARSET=utf8mb4
+   138	  COLLATE=utf8mb4_unicode_ci
+   139	  COMMENT='Настройки сайта (key-value)';
+
+
+################################################################
+# ФАЙЛ: sql/migrations/002_alter_products.sql
+################################################################
+
+     1	-- =============================================================
+     2	-- Миграция 002: расширение таблицы products (series_id, slug)
+     3	-- Идемпотентно: проверка через INFORMATION_SCHEMA
+     4	-- =============================================================
+     5	
+     6	USE furniture_platform;
+     7	
+     8	-- series_id
+     9	SET @col_exists = (
+    10	    SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+    11	    WHERE TABLE_SCHEMA = DATABASE()
+    12	      AND TABLE_NAME = 'products'
+    13	      AND COLUMN_NAME = 'series_id'
+    14	);
+    15	SET @sql = IF(@col_exists = 0,
+    16	    'ALTER TABLE products ADD COLUMN series_id INT UNSIGNED NULL COMMENT ''FK на product_series'' AFTER category_id',
+    17	    'SELECT ''series_id already exists'' AS info'
+    18	);
+    19	PREPARE stmt FROM @sql;
+    20	EXECUTE stmt;
+    21	DEALLOCATE PREPARE stmt;
+    22	
+    23	-- slug
+    24	SET @col_exists = (
+    25	    SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+    26	    WHERE TABLE_SCHEMA = DATABASE()
+    27	      AND TABLE_NAME = 'products'
+    28	      AND COLUMN_NAME = 'slug'
+    29	);
+    30	SET @sql = IF(@col_exists = 0,
+    31	    'ALTER TABLE products ADD COLUMN slug VARCHAR(220) NULL COMMENT ''URL-идентификатор товара'' AFTER sku',
+    32	    'SELECT ''slug already exists'' AS info'
+    33	);
+    34	PREPARE stmt FROM @sql;
+    35	EXECUTE stmt;
+    36	DEALLOCATE PREPARE stmt;
+    37	
+    38	-- FK fk_products_series
+    39	SET @fk_exists = (
+    40	    SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS
+    41	    WHERE TABLE_SCHEMA = DATABASE()
+    42	      AND TABLE_NAME = 'products'
+    43	      AND CONSTRAINT_NAME = 'fk_products_series'
+    44	      AND CONSTRAINT_TYPE = 'FOREIGN KEY'
+    45	);
+    46	SET @sql = IF(@fk_exists = 0,
+    47	    'ALTER TABLE products ADD CONSTRAINT fk_products_series FOREIGN KEY (series_id) REFERENCES product_series(id) ON UPDATE CASCADE ON DELETE SET NULL',
+    48	    'SELECT ''fk_products_series already exists'' AS info'
+    49	);
+    50	PREPARE stmt FROM @sql;
+    51	EXECUTE stmt;
+    52	DEALLOCATE PREPARE stmt;
+    53	
+    54	-- INDEX idx_products_series
+    55	SET @idx_exists = (
+    56	    SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS
+    57	    WHERE TABLE_SCHEMA = DATABASE()
+    58	      AND TABLE_NAME = 'products'
+    59	      AND INDEX_NAME = 'idx_products_series'
+    60	);
+    61	SET @sql = IF(@idx_exists = 0,
+    62	    'ALTER TABLE products ADD INDEX idx_products_series (series_id)',
+    63	    'SELECT ''idx_products_series already exists'' AS info'
+    64	);
+    65	PREPARE stmt FROM @sql;
+    66	EXECUTE stmt;
+    67	DEALLOCATE PREPARE stmt;
+

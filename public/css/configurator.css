@@ -261,9 +261,15 @@ a:hover {
 .configurator__title {
     font-size: var(--font-size-xl);
     font-weight: 600;
-    margin-bottom: 24px;
+    margin-bottom: 12px;
     padding-bottom: 16px;
     border-bottom: 1px solid var(--color-border);
+}
+
+.configurator__criteria {
+    margin: 0 0 24px;
+    font-size: var(--font-size-sm);
+    line-height: 1.5;
     color: var(--color-text-primary);
 }
 
@@ -814,36 +820,36 @@ a:hover {
    Интеграция с site layout (OPT-032) — светлая палитра Quattro
    ================================================================ */
 body.page-product {
-    --color-bg: #F4F7F9;
+    --color-bg: #F5F2F0;
     --color-surface: #ffffff;
-    --color-accent: #5584E8;
-    --color-accent-hover: #1F4ED8;
-    --color-text: #111827;
-    --color-text-secondary: #475569;
-    --color-text-muted: #6B7280;
-    --color-border: #D1D5DB;
+    --color-accent: #8B6F47;
+    --color-accent-hover: #5C4A2F;
+    --color-text: #2B2418;
+    --color-text-secondary: #5C4F48;
+    --color-text-muted: #7A6F67;
+    --color-border: #DDD0C8;
     background-color: var(--color-bg);
     color: var(--color-text);
 }
 
 body.page-product .product-page {
-    --color-bg: #F4F7F9;
+    --color-bg: #F5F2F0;
     --color-surface: #ffffff;
-    --color-surface-2: #F4F7F9;
-    --color-border: #D1D5DB;
-    --color-border-focus: #5584E8;
-    --color-accent: #5584E8;
-    --color-accent-hover: #1F4ED8;
-    --color-accent-glow: rgba(85, 132, 232, 0.22);
+    --color-surface-2: #F5F2F0;
+    --color-border: #DDD0C8;
+    --color-border-focus: #8B6F47;
+    --color-accent: #8B6F47;
+    --color-accent-hover: #5C4A2F;
+    --color-accent-glow: rgba(139, 111, 71, 0.22);
     --color-success: #16A34A;
     --color-error: #DC2626;
     --color-warning: #f59e0b;
-    --color-text-primary: #111827;
-    --color-text-secondary: #475569;
-    --color-text-muted: #6B7280;
-    --shadow-sm: 0 8px 24px rgba(15, 23, 42, 0.08);
-    --shadow-md: 0 20px 40px rgba(15, 23, 42, 0.08);
-    --shadow-lg: 0 24px 48px rgba(15, 23, 42, 0.12);
+    --color-text-primary: #2B2418;
+    --color-text-secondary: #5C4F48;
+    --color-text-muted: #7A6F67;
+    --shadow-sm: 0 8px 24px rgba(43, 36, 24, 0.1);
+    --shadow-md: 0 20px 40px rgba(43, 36, 24, 0.1);
+    --shadow-lg: 0 24px 48px rgba(43, 36, 24, 0.12);
     --shadow-glow: 0 0 0 3px var(--color-accent-glow);
 
     background-color: transparent;
@@ -861,7 +867,7 @@ body.page-product .gallery__main-image {
 body.page-product .option-card:hover,
 body.page-product .option-card:has(input[type="radio"]:checked),
 body.page-product .option-card:has(input[type="checkbox"]:checked) {
-    background-color: rgba(85, 132, 232, 0.06);
+    background-color: rgba(139, 111, 71, 0.08);
 }
 
 body.page-product .btn--primary {
@@ -869,11 +875,11 @@ body.page-product .btn--primary {
 }
 
 body.page-product .btn--primary:hover {
-    box-shadow: 0 8px 20px rgba(85, 132, 232, 0.28);
+    box-shadow: 0 8px 20px rgba(139, 111, 71, 0.28);
 }
 
 body.page-product .modal-overlay {
-    background: rgba(15, 23, 42, 0.45);
+    background: rgba(43, 36, 24, 0.45);
 }
 
 body.page-product .submit-error {

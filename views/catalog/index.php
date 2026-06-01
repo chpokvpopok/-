@@ -10,7 +10,7 @@ declare(strict_types=1);
         </nav>
 
         <h1 class="page-title">Каталог</h1>
-        <p class="section__text">Выберите направление — от диспетчерских пультов до модульных систем.</p>
+        <p class="section__text">Выберите комнату — от спальни и гостиной до кухни и домашнего офиса.</p>
 
         <?php if (empty($categories)): ?>
             <p class="section__text">Категории пока не добавлены.</p>
@@ -18,13 +18,18 @@ declare(strict_types=1);
             <div class="grid-3">
                 <?php foreach ($categories as $category): ?>
                     <?php
-                    $categoryId = (int)$category['id'];
-                    $direction  = get_catalog_direction($categoryId);
+                    $direction  = get_catalog_direction_for_category($category, $products ?? []);
                     ?>
                     <article class="card catalog-card direction-card">
+                        <img
+                            class="catalog-card__image"
+                            src="<?= e(category_image((string)($category['slug'] ?? ''))) ?>"
+                            alt="<?= e($category['name']) ?>"
+                            width="360"
+                            height="240"
+                            loading="lazy">
                         <h2><?= e($category['name']) ?></h2>
                         <?php if ($direction !== null): ?>
-                            <p class="text-muted"><?= e($direction['description']) ?></p>
                             <?php
                             $variants = $direction['variants'];
                             $title = 'Варианты мебели';
@@ -36,7 +41,7 @@ declare(strict_types=1);
                                 <?= ((int)$category['product_count'] === 1) ? 'модель' : 'моделей' ?>
                             </p>
                         <?php endif; ?>
-                        <a class="btn btn--outline" href="/catalog/<?= $categoryId ?>">Смотреть</a>
+                        <a class="btn btn--outline" href="/catalog/<?= (int)$category['id'] ?>">Смотреть</a>
                     </article>
                 <?php endforeach; ?>
             </div>
