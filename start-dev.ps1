@@ -177,9 +177,14 @@ function Test-MySqlReady {
     return (Invoke-MySql -MySqlExe $MySqlExe -Arguments $mysqlCliArgs) -eq 0
 }
 
-function Get-MySqlSourcePath {
-    param([Parameter(Mandatory)][string]$FilePath)
-    return ($FilePath -replace '\\', '/')
+function Read-MySqlSqlFile {
+    param([Parameter(Mandatory)][string]$SqlFilePath)
+    $sql = Get-Content -Path $SqlFilePath -Raw -Encoding UTF8
+    # BOM ломает первую команду USE в mysql
+    if ($sql.Length -gt 0 -and [int][char]$sql[0] -eq 0xFEFF) {
+        $sql = $sql.Substring(1)
+    }
+    return $sql
 }
 
 function Invoke-MySqlSqlFile {
@@ -189,13 +194,26 @@ function Invoke-MySqlSqlFile {
         [Parameter(Mandatory)][string]$SqlFilePath,
         [string]$Database = ''
     )
-    $sourcePath = Get-MySqlSourcePath -FilePath $SqlFilePath
+    # Не используем "source путь" - mysql.exe на Windows ломает кириллицу в пути (Failed to open file).
+    # Читаем файл в PowerShell (UTF-8) и передаём SQL в stdin.
+    $sql = Read-MySqlSqlFile -SqlFilePath $SqlFilePath
     $args = @($Arguments)
     if ($Database -ne '') {
         $args += $Database
     }
-    $args += @('-e', "source $sourcePath")
-    return (Invoke-MySql -MySqlExe $MySqlExe -Arguments $args)
+
+    $prevEap = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        $output = @($sql | & $MySqlExe @args 2>&1)
+        $code = [int]$LASTEXITCODE
+        if ($code -ne 0) {
+            $script:LastMySqlOutput = ($output | ForEach-Object { "$_" }) -join [Environment]::NewLine
+        }
+        return $code
+    } finally {
+        $ErrorActionPreference = $prevEap
+    }
 }
 
 function Write-MySqlFailure {

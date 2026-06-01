@@ -117,7 +117,8 @@ php -S localhost:8080 router.php
 | MySQL не отвечает | `net start MySQL80` или services.msc → запустить MySQL |
 | `Unknown database` | Повтори импорт `sql\schema.sql` |
 | Вместо русских названий `???????` | Импорт без `utf8mb4` - пересоздай базу (см. раздел «База данных») |
-| `миграция 002 ... не применилась` | `git pull`, пересоздай базу, запусти `.\start-dev.ps1` (миграции через `source`, не pipe). Убедись, что 001 прошла до 002 |
+| `миграция 002 ... не применилась` | `git pull`, пересоздай базу, запусти `.\start-dev.ps1`. Убедись, что 001 прошла до 002 |
+| `Failed to open file` с кракозябрами в пути | Проект в папке с кириллицей (`Проекты`, `Виктор`). Перенеси в `C:\dev\furniture_platform` или обнови `start-dev.ps1` (`git pull`) |
 | Скрипты PowerShell заблокированы | `Set-ExecutionPolicy -Scope Process Bypass` или используй `start-dev.cmd` |
 
 ## Запуск на macOS / Linux
