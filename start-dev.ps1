@@ -187,6 +187,16 @@ function Read-MySqlSqlFile {
     return $sql
 }
 
+function Get-MySqlSqlStagingPath {
+    param([Parameter(Mandatory)][string]$SqlFilePath)
+    $stagingDir = Join-Path $env:ProgramData 'furniture_platform_sql'
+    if (-not (Test-Path $stagingDir)) {
+        New-Item -ItemType Directory -Path $stagingDir -Force | Out-Null
+    }
+    $fileName = [IO.Path]::GetFileName($SqlFilePath)
+    return Join-Path $stagingDir $fileName
+}
+
 function Invoke-MySqlSqlFile {
     param(
         [Parameter(Mandatory)][string]$MySqlExe,
@@ -194,18 +204,25 @@ function Invoke-MySqlSqlFile {
         [Parameter(Mandatory)][string]$SqlFilePath,
         [string]$Database = ''
     )
-    # Не используем "source путь" - mysql.exe на Windows ломает кириллицу в пути (Failed to open file).
-    # Читаем файл в PowerShell (UTF-8) и передаём SQL в stdin.
+    # 1) Путь проекта с кириллицей нельзя отдавать в mysql source.
+    # 2) Pipe из PowerShell в mysql на Windows часто портит UTF-8 (в UI «???????»).
+    # Копируем SQL в ProgramData (латиница) и вызываем source оттуда.
     $sql = Read-MySqlSqlFile -SqlFilePath $SqlFilePath
+    $stagingFile = Get-MySqlSqlStagingPath -SqlFilePath $SqlFilePath
+    $utf8NoBom = New-Object System.Text.UTF8Encoding $false
+    [System.IO.File]::WriteAllText($stagingFile, $sql, $utf8NoBom)
+
+    $sourcePath = ($stagingFile -replace '\\', '/')
     $args = @($Arguments)
     if ($Database -ne '') {
         $args += $Database
     }
+    $args += @('-e', "source $sourcePath")
 
     $prevEap = $ErrorActionPreference
     $ErrorActionPreference = 'Continue'
     try {
-        $output = @($sql | & $MySqlExe @args 2>&1)
+        $output = @(& $MySqlExe @args 2>&1)
         $code = [int]$LASTEXITCODE
         if ($code -ne 0) {
             $script:LastMySqlOutput = ($output | ForEach-Object { "$_" }) -join [Environment]::NewLine

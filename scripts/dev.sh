@@ -69,8 +69,13 @@ if ! "$MYSQL" "${MYSQL_ARGS[@]}" -e "SELECT 1" >/dev/null 2>&1; then
 fi
 
 apply_schema() {
+  local staging="${TMPDIR:-/tmp}/furniture_platform_sql"
+  mkdir -p "$staging"
+  cp "$ROOT/sql/schema.sql" "$staging/schema.sql"
   echo "Применение sql/schema.sql..."
-  "$MYSQL" "${MYSQL_ARGS[@]}" < "$ROOT/sql/schema.sql" || {
+  local src="$staging/schema.sql"
+  src="${src//\\//}"
+  "$MYSQL" "${MYSQL_ARGS[@]}" -e "source $src" || {
     echo "ОШИБКА: не удалось применить sql/schema.sql"
     exit 1
   }
@@ -89,14 +94,20 @@ else
 fi
 
 if [[ -d "$ROOT/sql/migrations" ]]; then
+  SQL_STAGING="${TMPDIR:-/tmp}/furniture_platform_sql"
+  mkdir -p "$SQL_STAGING"
   echo "Применение миграций..."
   for f in "$ROOT"/sql/migrations/*.sql; do
     [[ -f "$f" ]] || continue
-    echo "  $(basename "$f")"
-    "$MYSQL" "${MYSQL_ARGS[@]}" "$DB_NAME" < "$f" || {
-      echo "ОШИБКА: миграция $(basename "$f") не применилась."
+    base="$(basename "$f")"
+    staged="$SQL_STAGING/$base"
+    cp "$f" "$staged"
+    echo "  $base"
+    staged_src="${staged//\\//}"
+    if ! "$MYSQL" "${MYSQL_ARGS[@]}" "$DB_NAME" -e "source $staged_src"; then
+      echo "ОШИБКА: миграция $base не применилась."
       exit 1
-    }
+    fi
   done
   echo "Миграции применены."
 fi
