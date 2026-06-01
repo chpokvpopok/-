@@ -104,6 +104,47 @@ function Test-PhpPdoMysql {
 }
 
 # mysql пишет ошибки в stderr; при $ErrorActionPreference = Stop PowerShell обрывает скрипт
+$script:MySqlDefaultsFile = $null
+$script:LastMySqlOutput = ''
+
+function Format-MyCnfValue {
+    param([string]$Value)
+    if ($Value -match '[#;\s"\\]') {
+        return '"' + ($Value.Replace('\', '\\').Replace('"', '\"')) + '"'
+    }
+    return $Value
+}
+
+function Update-MySqlDefaultsFile {
+    if ($script:MySqlDefaultsFile -and (Test-Path $script:MySqlDefaultsFile)) {
+        Remove-Item $script:MySqlDefaultsFile -Force -ErrorAction SilentlyContinue
+    }
+    $path = Join-Path $env:TEMP ("furniture-mysql-" + [guid]::NewGuid().ToString('N') + '.cnf')
+    $lines = @(
+        '[client]'
+        ('host=' + (Format-MyCnfValue $env:DB_HOST))
+        ('port=' + $env:DB_PORT)
+        ('user=' + (Format-MyCnfValue $env:DB_USER))
+    )
+    if ($env:DB_PASSWORD) {
+        $lines += ('password=' + (Format-MyCnfValue $env:DB_PASSWORD))
+    }
+    [IO.File]::WriteAllLines($path, $lines, (New-Object System.Text.UTF8Encoding $false))
+    $script:MySqlDefaultsFile = $path
+}
+
+function Get-MySqlBaseArgs {
+    if (-not $script:MySqlDefaultsFile) { Update-MySqlDefaultsFile }
+    return @("--defaults-extra-file=$script:MySqlDefaultsFile")
+}
+
+function Remove-MySqlDefaultsFile {
+    if ($script:MySqlDefaultsFile -and (Test-Path $script:MySqlDefaultsFile)) {
+        Remove-Item $script:MySqlDefaultsFile -Force -ErrorAction SilentlyContinue
+        $script:MySqlDefaultsFile = $null
+    }
+}
+
 function Invoke-MySql {
     param(
         [Parameter(Mandatory)][string]$MySqlExe,
@@ -111,28 +152,29 @@ function Invoke-MySql {
         [string]$InputText
     )
     $prevEap = $ErrorActionPreference
-    $ErrorActionPreference = 'Continue'
+    $ErrorActionPreference = 'SilentlyContinue'
+    $output = @()
     try {
-        if ($null -ne $InputText) {
-            $InputText | & $MySqlExe @Arguments 2>&1 | Out-Null
+        if ($PSBoundParameters.ContainsKey('InputText')) {
+            $output = @($InputText | & $MySqlExe @Arguments 2>&1)
         } else {
-            & $MySqlExe @Arguments 2>&1 | Out-Null
+            $output = @(& $MySqlExe @Arguments 2>&1)
         }
-        return $LASTEXITCODE
+        $code = $LASTEXITCODE
+        if ($code -ne 0) {
+            $script:LastMySqlOutput = (($output | ForEach-Object { "$_" }) -join [Environment]::NewLine).Trim()
+        }
+        return $code
     } finally {
         $ErrorActionPreference = $prevEap
     }
 }
 
-function Get-MySqlArgs {
-    $args = @('-h', $env:DB_HOST, '-P', $env:DB_PORT, '-u', $env:DB_USER)
-    if ($env:DB_PASSWORD) { $args += @("-p$($env:DB_PASSWORD)") }
-    return $args
-}
-
 function Test-MySqlReady {
     param([string]$MySqlExe)
-    return (Invoke-MySql -MySqlExe $MySqlExe -Arguments (Get-MySqlArgs + @('-e', 'SELECT 1'))) -eq 0
+    Update-MySqlDefaultsFile
+    $args = Get-MySqlBaseArgs + @('--batch', '-e', 'SELECT 1')
+    return (Invoke-MySql -MySqlExe $MySqlExe -Arguments $args) -eq 0
 }
 
 function Start-MysqlServiceIfNeeded {
@@ -217,6 +259,11 @@ if (-not (Test-MySqlReady -MySqlExe $mysql)) {
     Write-Host 'ОШИБКА: не удалось подключиться к MySQL.' -ForegroundColor Red
     Write-Host "  Хост:   $env:DB_HOST`:$env:DB_PORT" -ForegroundColor Yellow
     Write-Host "  Пользователь: $env:DB_USER" -ForegroundColor Yellow
+    if ($script:LastMySqlOutput) {
+        Write-Host ''
+        Write-Host '  Ответ mysql:' -ForegroundColor Yellow
+        Write-Host $script:LastMySqlOutput -ForegroundColor DarkYellow
+    }
     if (-not $dbLocalLoaded) {
         Write-Host ''
         Write-Host '  Создай db-local.ps1 (см. db-local.ps1.example):' -ForegroundColor Yellow
@@ -225,13 +272,11 @@ if (-not (Test-MySqlReady -MySqlExe $mysql)) {
     } else {
         Write-Host '  db-local.ps1 загружен — проверь DB_PORT и DB_PASSWORD в файле.' -ForegroundColor Yellow
     }
-    Write-Host ''
-    Write-Host '  Проверка вручную:' -ForegroundColor Yellow
-    Write-Host "    & `"$mysql`" -h $env:DB_HOST -P $env:DB_PORT -u $env:DB_USER -p -e `"SELECT 1`"" -ForegroundColor Yellow
+    Remove-MySqlDefaultsFile
     exit 1
 }
 
-$mysqlArgs = Get-MySqlArgs
+$mysqlArgs = Get-MySqlBaseArgs + @('--batch')
 
 Write-Host "Проверка базы $env:DB_NAME..."
 if ((Invoke-MySql -MySqlExe $mysql -Arguments ($mysqlArgs + @('-e', "USE $env:DB_NAME"))) -ne 0) {
@@ -262,6 +307,8 @@ if (Test-Path $migrationsDir) {
     }
     Write-Host 'Миграции применены.' -ForegroundColor Green
 }
+
+Remove-MySqlDefaultsFile
 
 Write-Host ''
 Write-Host '========================================' -ForegroundColor Cyan
