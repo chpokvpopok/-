@@ -224,6 +224,41 @@ function Write-MySqlFailure {
     }
 }
 
+function Test-DatabaseCoreTables {
+    param(
+        [Parameter(Mandatory)][string]$MySqlExe,
+        [Parameter(Mandatory)][string[]]$Arguments,
+        [Parameter(Mandatory)][string]$Database
+    )
+    $query = "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'products'"
+    $args = @($Arguments) + @($Database, '-N', '-e', $query)
+    $prevEap = $ErrorActionPreference
+    $ErrorActionPreference = 'SilentlyContinue'
+    try {
+        $count = (& $MySqlExe @args 2>$null | Select-Object -First 1)
+        return ($count -eq '1')
+    } finally {
+        $ErrorActionPreference = $prevEap
+    }
+}
+
+function Ensure-DatabaseSchema {
+    param(
+        [Parameter(Mandatory)][string]$MySqlExe,
+        [Parameter(Mandatory)][string[]]$Arguments
+    )
+    $schemaPath = Join-Path $projectRoot 'sql\schema.sql'
+    if (-not (Test-Path $schemaPath)) {
+        Write-Host 'ОШИБКА: не найден sql\schema.sql' -ForegroundColor Red
+        exit 1
+    }
+    if ((Invoke-MySqlSqlFile -MySqlExe $MySqlExe -Arguments $Arguments -SqlFilePath $schemaPath) -ne 0) {
+        Write-MySqlFailure -Step 'не удалось применить schema.sql'
+        exit 1
+    }
+    Write-Host 'schema.sql применён.' -ForegroundColor Green
+}
+
 function Start-MysqlServiceIfNeeded {
     $services = Get-Service -ErrorAction SilentlyContinue |
         Where-Object { $_.Name -match 'mysql' -and $_.Status -ne 'Running' }
@@ -328,18 +363,20 @@ if (-not $mysqlOk) {
 $mysqlArgs = Get-MySqlClientArgs
 
 Write-Host "Проверка базы $env:DB_NAME..."
-if ((Invoke-MySql -MySqlExe $mysql -Arguments ($mysqlArgs + @('-e', "USE $env:DB_NAME"))) -ne 0) {
-    Write-Host 'Создание базы из sql\schema.sql...' -ForegroundColor Yellow
-    $schemaPath = Join-Path $projectRoot 'sql\schema.sql'
-    if (-not (Test-Path $schemaPath)) {
-        Write-Host 'ОШИБКА: не найден sql\schema.sql' -ForegroundColor Red
-        exit 1
-    }
-    if ((Invoke-MySqlSqlFile -MySqlExe $mysql -Arguments $mysqlArgs -SqlFilePath $schemaPath) -ne 0) {
-        Write-MySqlFailure -Step 'не удалось применить schema.sql'
-        exit 1
-    }
-    Write-Host 'База создана.' -ForegroundColor Green
+$dbExists = (Invoke-MySql -MySqlExe $mysql -Arguments ($mysqlArgs + @('-e', "USE $env:DB_NAME"))) -eq 0
+$coreTablesOk = $false
+if ($dbExists) {
+    $coreTablesOk = Test-DatabaseCoreTables -MySqlExe $mysql -Arguments $mysqlArgs -Database $env:DB_NAME
+}
+
+if (-not $dbExists) {
+    Write-Host 'База не найдена - применяю sql\schema.sql...' -ForegroundColor Yellow
+    Ensure-DatabaseSchema -MySqlExe $mysql -Arguments $mysqlArgs
+} elseif (-not $coreTablesOk) {
+    Write-Host 'База есть, но нет таблицы products (часто после DROP DATABASE без schema.sql) - применяю sql\schema.sql...' -ForegroundColor Yellow
+    Ensure-DatabaseSchema -MySqlExe $mysql -Arguments $mysqlArgs
+} else {
+    Write-Host 'Основные таблицы на месте.' -ForegroundColor DarkGray
 }
 
 $migrationsDir = Join-Path $projectRoot 'sql\migrations'

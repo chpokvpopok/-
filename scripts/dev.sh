@@ -68,9 +68,24 @@ if ! "$MYSQL" "${MYSQL_ARGS[@]}" -e "SELECT 1" >/dev/null 2>&1; then
   exit 1
 fi
 
+apply_schema() {
+  echo "Применение sql/schema.sql..."
+  "$MYSQL" "${MYSQL_ARGS[@]}" < "$ROOT/sql/schema.sql" || {
+    echo "ОШИБКА: не удалось применить sql/schema.sql"
+    exit 1
+  }
+}
+
 if ! "$MYSQL" "${MYSQL_ARGS[@]}" -e "USE $DB_NAME" >/dev/null 2>&1; then
-  echo "Создание базы из sql/schema.sql..."
-  "$MYSQL" "${MYSQL_ARGS[@]}" < "$ROOT/sql/schema.sql"
+  apply_schema
+else
+  HAS_PRODUCTS="$("$MYSQL" "${MYSQL_ARGS[@]}" -N -e \
+    "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='$DB_NAME' AND table_name='products'" \
+    "$DB_NAME" 2>/dev/null || echo 0)"
+  if [[ "${HAS_PRODUCTS:-0}" -eq 0 ]]; then
+    echo "База $DB_NAME есть, но таблицы products нет - нужен schema.sql (после DROP DATABASE)."
+    apply_schema
+  fi
 fi
 
 if [[ -d "$ROOT/sql/migrations" ]]; then
