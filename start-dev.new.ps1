@@ -1,4 +1,4 @@
-﻿# Local development startup script for the shop project
+# Local development startup script for the shop project
 # Run with PowerShell: .\start-dev.ps1
 
 $ErrorActionPreference = 'Stop'

@@ -1,22 +1,26 @@
+/* ========================================
+   ПАЛИТРА: Минимальная современная (Modern)
+   Для домашней мебели - серо-белая, clean
+   ======================================== */
 :root {
     color-scheme: light;
     font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     font-size: 16px;
     line-height: 1.6;
-    --color-bg: #F5F2F0;
+    --color-bg: #FAFAFA;
     --color-surface: #ffffff;
-    --color-accent: #8B6F47;
-    --color-accent-strong: #5C4A2F;
-    --color-text: #2B2418;
-    --color-text-secondary: #5C4F48;
-    --color-text-muted: #7A6F67;
-    --color-border: #DDD0C8;
+    --color-accent: #6B7280;
+    --color-accent-strong: #374151;
+    --color-text: #1F2937;
+    --color-text-secondary: #4B5563;
+    --color-text-muted: #6B7280;
+    --color-border: #D1D5DB;
     --color-success: #16A34A;
     --color-error: #DC2626;
     --radius-sm: 12px;
     --radius-lg: 24px;
-    --shadow-sm: 0 8px 24px rgba(43, 36, 24, 0.1);
-    --shadow-md: 0 20px 40px rgba(43, 36, 24, 0.1);
+    --shadow-sm: 0 8px 24px rgba(31, 41, 55, 0.06);
+    --shadow-md: 0 20px 40px rgba(31, 41, 55, 0.06);
     --transition-normal: 180ms ease;
 }
 
@@ -266,6 +270,13 @@ a {
     flex-wrap: wrap;
     gap: 12px;
     margin-top: 28px;
+}
+
+.home-hero__tagline {
+    font-size: 1.35rem;
+    font-weight: 600;
+    margin: 0 0 16px;
+    color: var(--color-text-secondary);
 }
 
 .home-grid {
@@ -543,7 +554,7 @@ a {
 
 .faq-question:hover,
 .faq-question:focus-visible {
-    background: rgba(85, 132, 232, 0.08);
+    background: rgba(107, 114, 128, 0.08);
 }
 
 .faq-answer {

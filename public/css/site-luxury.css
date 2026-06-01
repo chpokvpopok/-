@@ -1,3 +1,7 @@
+/* ========================================
+   ПАЛИТРА: Премиальная люкс (Luxury)
+   Для домашней мебели - темно-коричневая-золотая
+   ======================================== */
 :root {
     color-scheme: light;
     font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -268,6 +272,13 @@ a {
     margin-top: 28px;
 }
 
+.home-hero__tagline {
+    font-size: 1.35rem;
+    font-weight: 600;
+    margin: 0 0 16px;
+    color: var(--color-text-secondary);
+}
+
 .home-grid {
     display: grid;
     gap: 24px;
@@ -339,7 +350,7 @@ a {
     z-index: 1000;
     background: rgba(255, 255, 255, 0.96);
     backdrop-filter: blur(12px);
-    border-bottom: 1px solid rgba(209, 213, 219, 0.75);
+    border-bottom: 1px solid rgba(221, 208, 200, 0.75);
 }
 
 .site-header .container {
@@ -477,7 +488,7 @@ a {
 
     .site-nav__link {
         padding: 12px 0;
-        border-bottom: 1px solid rgba(209, 213, 219, 0.5);
+        border-bottom: 1px solid rgba(221, 208, 200, 0.5);
     }
 
     .site-nav__link:last-child {
@@ -543,7 +554,7 @@ a {
 
 .faq-question:hover,
 .faq-question:focus-visible {
-    background: rgba(85, 132, 232, 0.08);
+    background: rgba(139, 111, 71, 0.08);
 }
 
 .faq-answer {
