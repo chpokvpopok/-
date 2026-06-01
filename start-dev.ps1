@@ -135,7 +135,31 @@ function Update-MySqlDefaultsFile {
 
 function Get-MySqlBaseArgs {
     if (-not $script:MySqlDefaultsFile) { Update-MySqlDefaultsFile }
-    return @("--defaults-extra-file=$script:MySqlDefaultsFile")
+    return @(
+        "--defaults-extra-file=$script:MySqlDefaultsFile",
+        '--connect-timeout=3'
+    )
+}
+
+function Test-MySqlPortOpen {
+    param([string]$HostName, [int]$Port)
+    try {
+        $client = New-Object System.Net.Sockets.TcpClient
+        $task = $client.ConnectAsync($HostName, $Port)
+        if (-not $task.Wait(1500)) { return $false }
+        $client.Close()
+        return $true
+    } catch {
+        return $false
+    }
+}
+
+function Get-MySqlServiceStatus {
+    foreach ($name in @('MySQL80', 'MySQL84', 'MySQL')) {
+        $svc = Get-Service -Name $name -ErrorAction SilentlyContinue
+        if ($svc) { return $svc }
+    }
+    return Get-Service -ErrorAction SilentlyContinue | Where-Object { $_.Name -match 'mysql' } | Select-Object -First 1
 }
 
 function Remove-MySqlDefaultsFile {
@@ -184,7 +208,7 @@ function Start-MysqlServiceIfNeeded {
         try {
             Write-Host "Запуск службы $($s.Name)..."
             Start-Service $s.Name -ErrorAction Stop
-            Start-Sleep -Seconds 3
+            Start-Sleep -Seconds 2
             return
         } catch { }
     }
@@ -243,15 +267,24 @@ if (-not $env:DB_PASSWORD) { $env:DB_PASSWORD = '' }
 Write-Host "MySQL: $env:DB_USER@$env:DB_HOST`:$env:DB_PORT, база $env:DB_NAME$(if ($env:DB_PASSWORD) { ', пароль задан' } else { ', пароль пустой' })" -ForegroundColor Cyan
 
 Write-Host 'Проверка MySQL...'
-if (-not (Test-MySqlReady -MySqlExe $mysql)) {
-    Write-Host 'MySQL не отвечает, пробую запустить службу...' -ForegroundColor Yellow
+$mysqlSvc = Get-MySqlServiceStatus
+if ($mysqlSvc -and $mysqlSvc.Status -ne 'Running') {
+    Write-Host "Служба $($mysqlSvc.Name) остановлена, запускаю..." -ForegroundColor Yellow
     Start-MysqlServiceIfNeeded
+    Start-Sleep -Seconds 2
+} elseif (-not $mysqlSvc) {
+    Write-Host 'Служба MySQL не найдена — проверяю подключение напрямую...' -ForegroundColor Yellow
 }
 
-if (-not (Test-MySqlReady -MySqlExe $mysql) -and $env:DB_PORT -eq '3306') {
-    Write-Host 'Пробую порт 3307 (часто после переустановки MySQL)...' -ForegroundColor Yellow
-    $env:DB_PORT = '3307'
-    Write-Host "MySQL: $env:DB_USER@$env:DB_HOST`:$env:DB_PORT" -ForegroundColor Cyan
+if (-not (Test-MySqlPortOpen -HostName $env:DB_HOST -Port ([int]$env:DB_PORT))) {
+    if (-not $dbLocalLoaded -and $env:DB_PORT -eq '3306' -and (Test-MySqlPortOpen -HostName $env:DB_HOST -Port 3307)) {
+        Write-Host 'На 3306 нет ответа, MySQL слушает 3307 — переключаю порт.' -ForegroundColor Yellow
+        $env:DB_PORT = '3307'
+    } else {
+        Write-Host "Порт $($env:DB_PORT) не отвечает, пробую запустить службу..." -ForegroundColor Yellow
+        Start-MysqlServiceIfNeeded
+        Start-Sleep -Seconds 2
+    }
 }
 
 if (-not (Test-MySqlReady -MySqlExe $mysql)) {
