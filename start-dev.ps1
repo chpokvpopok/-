@@ -1,4 +1,4 @@
-# Запуск локального dev-сервера (только PowerShell, без cmd/bash)
+﻿# Запуск локального dev-сервера (только PowerShell, без cmd/bash)
 # Запуск: из корня репозитория (shop):  .\start-dev.ps1
 
 $ErrorActionPreference = 'Stop'
@@ -72,7 +72,9 @@ function Find-PhpExecutable {
         try {
             $verLine = & $exe -r 2>$null
             if (-not $verLine) { continue }
-            $ver = [version]($verLine -replace '^(\d+\.\d+\.\d+).*', '$1')
+            $m = [regex]::Match($verLine, '(\d+\.\d+\.\d+)')
+            if (-not $m.Success) { continue }
+            $ver = [version]$m.Groups[1].Value
             if ($ver -ge [version]'8.2.0' -and $ver -gt $bestVer) {
                 $best = $exe
                 $bestVer = $ver
@@ -165,7 +167,7 @@ if ($LASTEXITCODE -ne 0) {
     Start-MysqlServiceIfNeeded
     & $mysql @mysqlArgs -e 'SELECT 1' 2>$null | Out-Null
     if ($LASTEXITCODE -ne 0) {
-        Write-Host 'ОШИБКА: не удалось подключиться к MySQL. Проверь пароль: `$env:DB_PASSWORD = "..."`' -ForegroundColor Red
+        Write-Host 'ОШИБКА: не удалось подключиться к MySQL. Задай пароль: $env:DB_PASSWORD = "..."' -ForegroundColor Red
         exit 1
     }
 }
