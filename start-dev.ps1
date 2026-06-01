@@ -177,6 +177,35 @@ function Test-MySqlReady {
     return (Invoke-MySql -MySqlExe $MySqlExe -Arguments $mysqlCliArgs) -eq 0
 }
 
+function Get-MySqlSourcePath {
+    param([Parameter(Mandatory)][string]$FilePath)
+    return ($FilePath -replace '\\', '/')
+}
+
+function Invoke-MySqlSqlFile {
+    param(
+        [Parameter(Mandatory)][string]$MySqlExe,
+        [Parameter(Mandatory)][string[]]$Arguments,
+        [Parameter(Mandatory)][string]$SqlFilePath,
+        [string]$Database = ''
+    )
+    $sourcePath = Get-MySqlSourcePath -FilePath $SqlFilePath
+    $args = @($Arguments)
+    if ($Database -ne '') {
+        $args += $Database
+    }
+    $args += @('-e', "source $sourcePath")
+    return (Invoke-MySql -MySqlExe $MySqlExe -Arguments $args)
+}
+
+function Write-MySqlFailure {
+    param([string]$Step)
+    Write-Host "ОШИБКА: $Step" -ForegroundColor Red
+    if ($script:LastMySqlOutput) {
+        Write-Host $script:LastMySqlOutput -ForegroundColor Yellow
+    }
+}
+
 function Start-MysqlServiceIfNeeded {
     $services = Get-Service -ErrorAction SilentlyContinue |
         Where-Object { $_.Name -match 'mysql' -and $_.Status -ne 'Running' }
@@ -288,9 +317,8 @@ if ((Invoke-MySql -MySqlExe $mysql -Arguments ($mysqlArgs + @('-e', "USE $env:DB
         Write-Host 'ОШИБКА: не найден sql\schema.sql' -ForegroundColor Red
         exit 1
     }
-    $schemaSql = Get-Content -Path $schemaPath -Raw -Encoding UTF8
-    if ((Invoke-MySql -MySqlExe $mysql -Arguments $mysqlArgs -InputText $schemaSql) -ne 0) {
-        Write-Host 'ОШИБКА: не удалось применить schema.sql' -ForegroundColor Red
+    if ((Invoke-MySqlSqlFile -MySqlExe $mysql -Arguments $mysqlArgs -SqlFilePath $schemaPath) -ne 0) {
+        Write-MySqlFailure -Step 'не удалось применить schema.sql'
         exit 1
     }
     Write-Host 'База создана.' -ForegroundColor Green
@@ -301,9 +329,9 @@ if (Test-Path $migrationsDir) {
     Write-Host 'Применение миграций...'
     Get-ChildItem -Path $migrationsDir -Filter '*.sql' | Sort-Object Name | ForEach-Object {
         Write-Host "  $($_.Name)"
-        $migrationSql = Get-Content -Path $_.FullName -Raw -Encoding UTF8
-        if ((Invoke-MySql -MySqlExe $mysql -Arguments $mysqlArgs -InputText $migrationSql) -ne 0) {
-            Write-Host "ОШИБКА: миграция $($_.Name) не применилась." -ForegroundColor Red
+        if ((Invoke-MySqlSqlFile -MySqlExe $mysql -Arguments $mysqlArgs -SqlFilePath $_.FullName -Database $env:DB_NAME) -ne 0) {
+            Write-MySqlFailure -Step "миграция $($_.Name) не применилась"
+            Write-Host 'Подсказка: если 002 падает - сначала должна пройти 001_content_tables.sql (таблица product_series).' -ForegroundColor DarkGray
             exit 1
         }
     }
