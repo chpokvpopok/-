@@ -136,13 +136,13 @@ function Invoke-MySql {
         [int]$TimeoutSec = 8
     )
     $job = Start-Job -ArgumentList @($MySqlExe, $Arguments, $InputText) -ScriptBlock {
-        param($exe, $args, $inputText)
+        param($exe, $mysqlCliArgs, $inputText)
         $ErrorActionPreference = 'Continue'
         try {
             if ($null -ne $inputText -and $inputText -ne '') {
-                $output = @($inputText | & $exe @args 2>&1)
+                $output = @($inputText | & $exe @mysqlCliArgs 2>&1)
             } else {
-                $output = @(& $exe @args 2>&1)
+                $output = @(& $exe @mysqlCliArgs 2>&1)
             }
             return @{
                 Code = [int]$LASTEXITCODE
@@ -172,8 +172,8 @@ function Invoke-MySql {
 function Test-MySqlReady {
     param([string]$MySqlExe)
     Write-Host "  mysql $($env:DB_USER)@$($env:DB_HOST):$($env:DB_PORT) ..." -ForegroundColor DarkGray
-    $args = (Get-MySqlClientArgs) + @('-e', 'SELECT 1')
-    return (Invoke-MySql -MySqlExe $MySqlExe -Arguments $args) -eq 0
+    $mysqlCliArgs = (Get-MySqlClientArgs) + @('-e', 'SELECT 1')
+    return (Invoke-MySql -MySqlExe $MySqlExe -Arguments $mysqlCliArgs) -eq 0
 }
 
 function Start-MysqlServiceIfNeeded {
